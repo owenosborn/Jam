@@ -189,8 +189,8 @@ io = {
     beat_count = 0,               -- current beat number
     tick_count = 0,               -- current tick within beat
     
-    -- Core output function
-    playNote = function(number, velocity, duration) end,
+    -- Core output function, output channel is 1 if not given
+    playNote = function(number, velocity, duration, channel) end,
     
     -- Future extensions could include:
     -- playCC = function(controller, value) end,
@@ -252,10 +252,12 @@ function example_utils.get_length(pattern) end
 This convention enables script-based generation of a comprehensive API reference file from all utility modules.
 
 ## Mother Program
-Main runtime that manages execution:
+Main runtime that manages execution. Basic example:
 
 ```lua
 -- mother.lua
+local socket = require("socket")
+
 local function initIO(tpb)
     local io = {}
     io.tpb = tpb or 180
@@ -263,7 +265,9 @@ local function initIO(tpb)
     io.beat_count = 0
     io.tick_count = 0
     
-    io.playNote = function(number, velocity, duration)
+    io.playNote = function(note, velocity, duration, channel)
+        ch = channel or 1
+        print(note,velocity,duration, ch)
         -- Hardware-specific MIDI output
     end
     
@@ -273,30 +277,32 @@ end
 local function run()
     local io = initIO()
     local current_jam = require("jam")
-
-    -- Initialize the jam
+        
+    -- Initialize the jam if it has an init function
     if current_jam.init then
-        current_jam:init(io)  -- Pass io to init
+        current_jam:init(io)
     end
 
-    -- Main tick loop
-    local tickInterval = (60 / io.tempo) / io.tpb
+    local tickInterval = (60 / io.tempo) / io.tpb -- seconds per tick
+    local next_tick_time = socket.gettime()  -- Initialize timing reference
+
     while true do
         current_jam:tick(io)
         
-        io.tick_count = (io.tick_count + 1) % io.tpb
-        if io.tick_count == 0 then
-            io.beat_count = io.beat_count + 1
+        -- Wait until the next tick time
+        next_tick_time = next_tick_time + tickInterval
+        while socket.gettime() < next_tick_time do
+            socket.sleep(0.0005) -- Sleep in small increments for accuracy
         end
-        
-        sleep(tickInterval)
     end
+
 end
 
 run()
 ```
 
 ## File Organization
+
 ```
 /
 ├── mother.lua           -- Main runtime (100-200 lines)
