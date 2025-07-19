@@ -1,1 +1,323 @@
-# Jam
+# Jam, Lua Music Coding System 
+
+## Overview
+A modular music coding framework implemented in Lua that allows users to sketch musical ideas called jams. The system uses a configurable tick-based approach for fine-grained timing control. We provide fundamental musical objects for creating musical structures, with functionality added through utility modules.
+
+## Core Concepts
+
+- Each musical jam implements `init(io)` and `tick(io)` functions
+- `init(io)` called once at start to initialize the jam
+- `tick(io)` called every tick, which is a small fraction of the beat
+- `io` contains MIDI functions for playing notes and CC, global properties, etc
+- The `io.tpb` (ticks per beat) property holds the current resolution
+- Users calculate timing based on `io.tpb` for flexibility
+- Ticks are always assumed to be integers, so make sure of this when calculating tick values: `quarter_note = io.tpb // 4`
+- Default `io.tpb = 180` provides good balance of precision and performance
+
+```lua
+local jam = {}
+
+function jam:init(io)
+    self.counter = 0
+    self.quarter_note_ticks = io.tpb // 4  -- Pre-calculate common divisions
+    self.eighth_note_ticks = io.tpb // 8
+end
+
+function jam:tick(io)
+    -- Musical logic using io.tpb for timing calculations
+    self.counter = (self.counter + 1) % io.tpb
+    
+    if self.counter == 0 then  -- Every beat
+        io.playNote(60, 100, self.quarter_note_ticks)  -- Quarter note duration
+    end
+    
+    if self.counter % (io.tpb / 2) == 0 then  -- Every half beat
+        io.playNote(67, 80, self.eighth_note_ticks)   -- Eighth note duration
+    end
+end
+
+return jam
+```
+
+### Nestable Jams
+Jams can load and coordinate other jams:
+
+```lua
+local jam = {}
+local utils = require("lib/utils")
+
+function jam:init(io)
+    self.bassline = utils.loadJam("jams/bassline")
+    self.drums = utils.loadJam("jams/rockdrums")
+    
+    -- Could also set up timing relationships based on io.tpb
+    self.coordination_counter = 0
+end
+
+function jam:tick(io)
+    self.bassline:tick(io)
+    self.drums:tick(io)
+    
+    -- Add coordination logic here
+end
+
+return jam
+```
+
+### Safe Jam Loading
+Utility for handling dependencies and reloading:
+
+```lua
+-- lib/utils.lua
+local utils = {}
+local _loading = {}
+
+function utils.loadJam(path)
+    if _loading[path] then
+        error("Circular dependency detected: " .. path)
+    end
+    
+    _loading[path] = true
+    package.loaded[path] = nil
+    local jam = require(path)
+    _loading[path] = nil
+    
+    -- Initialize the jam
+    if jam.init then
+        jam:init(io)  -- Pass io to init
+    end
+
+    return jam
+end
+
+return utils
+```
+
+## Elemental Music Objects
+
+All core musical objects are defined in `lib/elements.lua`:
+
+### Note
+Basic unit of musical information:
+
+```lua
+Note = {}
+Note.__index = Note
+function Note.new()
+    local self = setmetatable({}, Note)
+    self.number = 60        -- MIDI note number
+    self.velocity = 100     -- MIDI velocity (0-127)
+    self.duration = 90      -- note duration in ticks
+    self.time = 0           -- start time offset in ticks
+    return self
+end
+```
+
+### Chord
+Collection of pitches:
+
+```lua
+Chord = {}
+Chord.__index = Chord
+function Chord.new()
+    local self = setmetatable({}, Chord)
+    self.pitches = {}      -- array of MIDI note numbers
+    self.root = 60         -- root note
+    self.bass = 0          -- bass note (0 = use root)
+    self.name = ""         -- chord symbol e.g. "Am7"
+    return self
+end
+```
+
+### Pattern
+Collection of notes with timing:
+
+```lua
+Pattern = {}
+Pattern.__index = Pattern
+function Pattern.new()
+    local self = setmetatable({}, Pattern)
+    self.notes = {}               -- array of Note objects
+    self.length = 0               -- total length in ticks
+    self.playhead = 0             -- current position in ticks
+    return self
+end
+```
+
+### Progression
+Collection of chords with timing:
+
+```lua
+Progression = {}
+Progression.__index = Progression
+function Progression.new()
+    local self = setmetatable({}, Progression)
+    self.chords = {}            -- array of Chord objects
+    self.durations = {}         -- duration of each chord in ticks
+    self.length = 0             -- total length in ticks  
+    self.playhead = 0           -- current position in ticks
+    return self
+end
+```
+
+### Counter
+Utility for counting ticks with automatic rollover:
+
+```lua
+Counter = {}
+Counter.__index = Counter
+function Counter.new(max)
+    local self = setmetatable({}, Counter)
+    self.max = max or 1
+    self.count = 0
+    return self
+end
+
+function Counter:tick()
+    self.count = (self.count + 1) % self.max
+    return self.count == 0  -- returns true on rollover
+end
+```
+
+## IO Object
+The `io` object passed to `tick()` provides:
+
+```lua
+io = {
+    tpb = 180,                    -- ticks per beat (configurable)
+    tempo = 120,                  -- BPM
+    beat_count = 0,               -- current beat number
+    tick_count = 0,               -- current tick within beat
+    
+    -- Core output function
+    playNote = function(number, velocity, duration) end,
+    
+    -- Future extensions could include:
+    -- playCC = function(controller, value) end,
+    -- setBPM = function(bpm) end,
+}
+```
+
+## Extended Functionality
+Musical utilities are organized in focused modules, for example:
+
+```lua
+-- lib/pattern_utils.lua - Pattern manipulation functions
+
+-- Transpose pattern by semitones, returns new Pattern
+function pattern_utils.transpose(pattern, semitones) end
+
+-- Reverse note order in pattern, returns new Pattern  
+function pattern_utils.reverse(pattern) end
+
+-- Scale all note velocities by factor (0.5 = half, 2.0 = double)
+function pattern_utils.scale_velocity(pattern, factor) end
+```
+
+```lua  
+-- lib/chord_utils.lua - Chord construction and analysis
+
+-- Build chord from root and chord type, returns Chord
+function chord_utils.build(root, chord_type) end
+
+-- Get next chord in circle of fifths, returns Chord
+function chord_utils.circle_of_fifths(chord) end
+```
+
+### Code Convention for Utility Modules
+All utility modules in the `lib/` folder must follow this documentation convention:
+
+- **Function Comments**: Every function declaration should have 0 or more comment lines directly above it describing what it does, and the return value if any
+- **No Comment Required**: If a function needs no explanation (self-evident), it can have 0 comment lines
+- **Generally Documented**: Most functions should have at least 1 comment line for clarity
+- **API Generation**: This convention allows automatic generation of API documentation by extracting function declarations and their preceding comments
+
+Example of proper documentation format:
+
+```lua
+-- lib/example_utils.lua
+
+-- Create a new pattern with specified length in ticks
+-- Returns empty Pattern object ready for note insertion
+function example_utils.create_pattern(length_ticks) end
+
+-- Merge two patterns into one, concatenating their notes
+-- Second pattern notes are offset by first pattern's length
+function example_utils.merge_patterns(pattern1, pattern2) end
+
+-- Simple getter that needs no explanation
+function example_utils.get_length(pattern) end
+```
+
+This convention enables script-based generation of a comprehensive API reference file from all utility modules.
+
+## Mother Program
+Main runtime that manages execution:
+
+```lua
+-- mother.lua
+local function initIO(tpb)
+    local io = {}
+    io.tpb = tpb or 180
+    io.tempo = 120
+    io.beat_count = 0
+    io.tick_count = 0
+    
+    io.playNote = function(number, velocity, duration)
+        -- Hardware-specific MIDI output
+    end
+    
+    return io
+end
+
+local function run()
+    local io = initIO()
+    local current_jam = require("jam")
+
+    -- Initialize the jam
+    if current_jam.init then
+        current_jam:init(io)  -- Pass io to init
+    end
+
+    -- Main tick loop
+    local tickInterval = (60 / io.tempo) / io.tpb
+    while true do
+        current_jam:tick(io)
+        
+        io.tick_count = (io.tick_count + 1) % io.tpb
+        if io.tick_count == 0 then
+            io.beat_count = io.beat_count + 1
+        end
+        
+        sleep(tickInterval)
+    end
+end
+
+run()
+```
+
+## File Organization
+```
+/
+├── mother.lua           -- Main runtime (100-200 lines)
+├── jam.lua              -- Current working jam (20-100 lines)
+├── jams/                -- Collection of user jams
+│   ├── bassline.lua     -- Individual jams (20-100 lines)
+│   ├── rockdrums.lua
+│   └── ...
+└── lib/                 -- Core system and utilities
+    ├── elements.lua   -- Basic music objects (50-150 lines)
+    ├── utils.lua        -- System utilities (50-100 lines)
+    ├── pattern_utils.lua -- Pattern operations (100-200 lines)
+    ├── chord_utils.lua   -- Chord operations (100-200 lines)
+    ├── rhythm_utils.lua  -- Rhythm operations (100-200 lines)
+    └── ...
+```
+
+## Design Principles
+- **File size**: Keep modules 50-200 lines for optimal LLM collaboration
+- **Modularity**: Each file has a single, focused purpose
+- **Flexibility**: Variable timing resolution adapts to different use cases
+- **Simplicity**: Minimal ceremony, maximum musical expression
+- **Composability**: Jams nest and combine naturally
+
