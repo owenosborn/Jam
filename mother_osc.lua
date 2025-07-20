@@ -1,24 +1,48 @@
--- mother.lua with drift correction
+-- mother.lua with OSC output and drift correction
 local socket = require("socket")
+local losc = require("losc")
+local plugin = require("losc.plugins.udp-socket")
 
-local function initIO(tpb)
+local function initIO(tpb, osc_host, osc_port)
     local io = {}
     io.tpb = tpb or 180
     io.tempo = 120
     io.beat_count = 0
     io.tick_count = 0
     
+    -- Create OSC client using losc
+    local udp = plugin.new {sendAddr = osc_host or 'localhost', sendPort = osc_port or 9000}
+    local osc = losc.new {plugin = udp}
+    
     io.playNote = function(note, velocity, duration, channel)
-        ch = channel or 1
-        print(note, velocity, duration, ch)
-        -- Hardware-specific MIDI output
+        local ch = channel or 1
+        
+        -- Create and send note message
+        local note_message = osc.new_message {
+            address = '/note',
+            types = 'iiii',
+            note, velocity, duration, ch
+        }
+        osc:send(note_message)
+    end
+    
+    -- Additional OSC functions you could add
+    io.sendCC = function(controller, value, channel)
+        local ch = channel or 1
+        local cc_message = osc.new_message {
+            address = '/cc',
+            types = 'iii',
+            ch, controller, value
+        }
+        osc:send(cc_message)
     end
     
     return io
 end
 
 local function run()
-    local io = initIO()
+    -- You can specify OSC destination here
+    local io = initIO(180, "localhost", 9000)  -- tpb, host, port
     local current_jam = require("jam")
         
     -- Initialize the jam if it has an init function
@@ -31,6 +55,10 @@ local function run()
     local tick_number = 0
     local missed_ticks = 0
     local max_catch_up = 5  -- Don't try to catch up more than 5 ticks at once
+
+    print(string.format("Starting Jam system with OSC output to localhost:9000"))
+    print(string.format("Tempo: %d BPM, TPB: %d, Tick interval: %.4f ms", 
+                        io.tempo, io.tpb, tickInterval * 1000))
 
     while true do
         local current_time = socket.gettime()
