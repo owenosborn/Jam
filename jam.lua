@@ -2,21 +2,17 @@ local jam = {}
 
 function jam:init(io)
     self.counter = 0
-    self.quarter_note_ticks = io.tpb // 4  -- Pre-calculate common divisions
-    self.eighth_note_ticks = io.tpb // 8
+    self.eighth_note_ticks = io.tpb // 8  -- Calculate eighth note duration
+    self.hihat_note = 42  -- MIDI note for closed hi-hat (GM standard)
 end
 
 function jam:tick(io)
-    -- Musical logic using io.tpb for timing calculations
+    -- Play hi-hat on every eighth note
+    if self.counter % self.eighth_note_ticks == 0 then
+        io.playNote(self.hihat_note, 80, self.eighth_note_ticks // 2)  -- Short duration
+    end
+    
     self.counter = (self.counter + 1) % io.tpb
-    
-    if self.counter == 0 then  -- Every beat
-        io.playNote(60, 100, self.quarter_note_ticks)  -- Quarter note duration
-    end
-    
-    if self.counter % (io.tpb / 2) == 0 then  -- Every half beat
-        io.playNote(67, 80, self.eighth_note_ticks)   -- Eighth note duration
-    end
 end
 
 return jam

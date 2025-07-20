@@ -10,7 +10,7 @@ local function initIO(tpb)
     
     io.playNote = function(note, velocity, duration, channel)
         ch = channel or 1
-        print(note,velocity,duration, ch)
+        print(note, velocity, duration, ch)
         -- Hardware-specific MIDI output
     end
     
@@ -27,18 +27,26 @@ local function run()
     end
 
     local tickInterval = (60 / io.tempo) / io.tpb -- seconds per tick
-    local next_tick_time = socket.gettime()  -- Initialize timing reference
+    local start_time = socket.gettime()  -- Absolute reference point
+    local tick_number = 0
 
     while true do
-        current_jam:tick(io)
+        local target_time = start_time + (tick_number * tickInterval)
+        local current_time = socket.gettime()
         
-        -- Wait until the next tick time
-        next_tick_time = next_tick_time + tickInterval
-        while socket.gettime() < next_tick_time do
-            socket.sleep(0.0005) -- Sleep in small increments for accuracy
+        if current_time >= target_time then
+            -- Update io timing info before calling tick
+            io.beat_count = tick_number // io.tpb
+            io.tick_count = tick_number % io.tpb
+            
+            current_jam:tick(io)
+            tick_number = tick_number + 1
+        else
+            -- Sleep for a small amount to avoid busy-waiting
+            local sleep_time = math.min(0.0001, (target_time - current_time) * 0.5)
+            socket.sleep(sleep_time)
         end
     end
-
 end
 
 run()
