@@ -264,6 +264,10 @@ The main mother.lua example runtime uses absolute time-based scheduling with dri
 - Uses adaptive sleep timing: longer sleeps when time permits, micro-sleeps when close to deadline
 - Maintains precise timing even under system load or temporary stalls
 
+### Mother OSC example
+
+The mother_osc.lua example sends the note messages as OSC messages to specific UDP port.
+
 ## File Organization
 
 ```
