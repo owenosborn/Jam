@@ -13,15 +13,19 @@ local function initIO(tpb, osc_host, osc_port)
     -- Create OSC client using losc
     local udp = plugin.new {sendAddr = osc_host or 'localhost', sendPort = osc_port or 9000}
     local osc = losc.new {plugin = udp}
-    
+   
+    -- Calculate seconds per tick for duration conversion
+    local seconds_per_tick = (60 / io.tempo) / io.tpb
+
     io.playNote = function(note, velocity, duration, channel)
         local ch = channel or 1
         
         -- Create and send note message
+        -- Convert duration to seconds
         local note_message = osc.new_message {
             address = '/note',
             types = 'iiii',
-            note, velocity, duration, ch
+            note, velocity, duration * 3, ch
         }
         osc:send(note_message)
     end
