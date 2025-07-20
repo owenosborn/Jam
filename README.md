@@ -11,7 +11,7 @@ A modular music coding framework implemented in Lua that allows users to sketch 
 - `io` contains MIDI functions for playing notes and CC, global properties, etc
 - The `io.tpb` (ticks per beat) property holds the current resolution
 - Users calculate timing based on `io.tpb` for flexibility
-- Ticks are always assumed to be integers, so make sure of this when calculating tick values: `quarter_note = io.tpb // 4`
+- Ticks are always assumed to be integers, so make sure of this when calculating tick values: `sixteenth_note = io.tpb // 4`
 - Default `io.tpb = 180` provides good balance of precision and performance
 
 ```lua
@@ -19,8 +19,8 @@ local jam = {}
 
 function jam:init(io)
     self.counter = 0
-    self.quarter_note_ticks = io.tpb // 4  -- Pre-calculate common divisions
-    self.eighth_note_ticks = io.tpb // 8
+    self.quarter_note_ticks = io.tpb  -- Pre-calculate common divisions
+    self.eighth_note_ticks = io.tpb // 2
 end
 
 function jam:tick(io)
@@ -31,7 +31,7 @@ function jam:tick(io)
         io.playNote(60, 100, self.quarter_note_ticks)  -- Quarter note duration
     end
     
-    if self.counter % (io.tpb / 2) == 0 then  -- Every half beat
+    if self.counter % (io.tpb / 2) == 0 then  -- Every eighth
         io.playNote(67, 80, self.eighth_note_ticks)   -- Eighth note duration
     end
 end
