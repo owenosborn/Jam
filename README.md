@@ -252,71 +252,34 @@ function example_utils.get_length(pattern) end
 This convention enables script-based generation of a comprehensive API reference file from all utility modules.
 
 ## Mother Program
-Main runtime that manages execution. Basic example:
 
-```lua
--- mother.lua
-local socket = require("socket")
+Provides runtime environment: sets up io object, loads jam, calls init(io), and tick(io), handles input/output. A Lua example mother.lua is included. 
 
-local function initIO(tpb)
-    local io = {}
-    io.tpb = tpb or 180
-    io.tempo = 120
-    io.beat_count = 0
-    io.tick_count = 0
-    
-    io.playNote = function(note, velocity, duration, channel)
-        ch = channel or 1
-        print(note,velocity,duration, ch)
-        -- Hardware-specific MIDI output
-    end
-    
-    return io
-end
+### Mother Program Timing
 
-local function run()
-    local io = initIO()
-    local current_jam = require("jam")
-        
-    -- Initialize the jam if it has an init function
-    if current_jam.init then
-        current_jam:init(io)
-    end
-
-    local tickInterval = (60 / io.tempo) / io.tpb -- seconds per tick
-    local next_tick_time = socket.gettime()  -- Initialize timing reference
-
-    while true do
-        current_jam:tick(io)
-        
-        -- Wait until the next tick time
-        next_tick_time = next_tick_time + tickInterval
-        while socket.gettime() < next_tick_time do
-            socket.sleep(0.0005) -- Sleep in small increments for accuracy
-        end
-    end
-
-end
-
-run()
-```
+The main mother.lua example runtime uses absolute time-based scheduling with drift correction:
+- Calculates expected tick number from elapsed wall-clock time
+- Automatically catches up if execution falls behind (up to 5 ticks)
+- Logs warnings and jumps ahead if severely behind to prevent infinite catch-up
+- Uses adaptive sleep timing: longer sleeps when time permits, micro-sleeps when close to deadline
+- Maintains precise timing even under system load or temporary stalls
 
 ## File Organization
 
 ```
 /
-├── mother.lua           -- Main runtime (100-200 lines)
-├── jam.lua              -- Current working jam (20-100 lines)
+├── mother.lua           -- Main runtime 
+├── jam.lua              -- Current working jam 
 ├── jams/                -- Collection of user jams
-│   ├── bassline.lua     -- Individual jams (20-100 lines)
+│   ├── bassline.lua     -- Individual jams 
 │   ├── rockdrums.lua
 │   └── ...
 └── lib/                 -- Core system and utilities
-    ├── elements.lua   -- Basic music objects (50-150 lines)
-    ├── utils.lua        -- System utilities (50-100 lines)
-    ├── pattern_utils.lua -- Pattern operations (100-200 lines)
-    ├── chord_utils.lua   -- Chord operations (100-200 lines)
-    ├── rhythm_utils.lua  -- Rhythm operations (100-200 lines)
+    ├── elements.lua   -- Basic music objects 
+    ├── utils.lua        -- System utilities
+    ├── pattern_utils.lua -- Pattern operations 
+    ├── chord_utils.lua   -- Chord operations 
+    ├── rhythm_utils.lua  -- Rhythm operations 
     └── ...
 ```
 
