@@ -6,7 +6,7 @@ local plugin = require("losc.plugins.udp-socket")
 local function initIO(tpb, osc_host, osc_port)
     local io = {}
     io.tpb = tpb or 180
-    io.tempo = 120
+    io.tempo = 101
     io.beat_count = 0
     io.tick_count = 0
     
