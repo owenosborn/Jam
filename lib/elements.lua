@@ -91,10 +91,9 @@ function Note:print_row(index)
     print(info)
 end
 
-function Note:play(io, channel)
-    local ch = self.channel or io.ch
+function Note:play(io, c)
+    local ch = c or self.channel or io.ch
     local dur =  self.duration * io.tt
-    --print(self.number)
     io.playNote(self.number, self.velocity, dur, ch)
 end
 
