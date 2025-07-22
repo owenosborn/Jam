@@ -2,12 +2,14 @@
 -- basic musical unit
 Note = {}
 Note.__index = Note
-function Note.new()
+
+function Note.new(params)
     local self = setmetatable({}, Note)
-    self.number = 60        -- MIDI note number
-    self.velocity = 100     -- MIDI velocity (0-127)
-    self.duration = 90      -- note duration in ticks
-    self.time = 0           -- start time offset in ticks
+    params = params or {}
+    self.number = params.num or 60        -- MIDI note number
+    self.velocity = params.vel or 100   -- MIDI velocity
+    self.time = params.time or 0             -- time at which the note plays in ticks
+    self.duration = params.dur or 180   -- note duration in ticks
     return self
 end
 
@@ -58,6 +60,42 @@ end
 function Counter:tick()
     self.count = (self.count + 1) % self.max
     return self.count == 0  -- returns true on rollover
+end
+
+
+----------- a few useful methods
+
+
+function Note:print()
+    local formatStr = "%-11s | %-9s | %-6s | %-9s"
+    local info = string.format(
+        formatStr,
+        tostring(self.number),
+        tostring(self.velocity),
+        tostring(self.time),
+        tostring(self.duration)
+    )
+    print(info)
+end
+
+function Note:print_row(index)
+    local formatStr = "%-7s | %-11s | %-9s | %-6s | %-9s"
+    local info = string.format(
+        formatStr,
+        tostring(index),
+        tostring(self.number),
+        tostring(self.velocity),
+        tostring(self.time),
+        tostring(self.duration)
+    )
+    print(info)
+end
+
+function Note:play(io, channel)
+    local ch = self.channel or io.ch
+    local dur =  self.duration * io.tt
+    --print(self.number)
+    io.playNote(self.number, self.velocity, dur, ch)
 end
 
 return {

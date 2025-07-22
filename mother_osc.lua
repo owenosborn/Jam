@@ -6,26 +6,27 @@ local plugin = require("losc.plugins.udp-socket")
 local function initIO(tpb, osc_host, osc_port)
     local io = {}
     io.tpb = tpb or 180
-    io.tempo = 101
+    io.bpm = 101
+    io.tt = (60 / io.bpm) / io.tpb * 1000  -- tick time
     io.beat_count = 0
     io.tick_count = 0
+    io.ch = 100
     
     -- Create OSC client using losc
     local udp = plugin.new {sendAddr = osc_host or 'localhost', sendPort = osc_port or 9000}
     local osc = losc.new {plugin = udp}
    
     -- Calculate seconds per tick for duration conversion
-    local seconds_per_tick = (60 / io.tempo) / io.tpb
+    local seconds_per_tick = (60 / io.bpm) / io.tpb
 
     io.playNote = function(note, velocity, duration, channel)
-        local ch = channel or 1
-        
+        local ch = channel or io.ch
         -- Create and send note message
         -- Convert duration to seconds
         local note_message = osc.new_message {
             address = '/note',
             types = 'iiii',
-            note, velocity, duration * 3, ch
+            note, velocity, duration, ch
         }
         osc:send(note_message)
     end
@@ -54,15 +55,15 @@ local function run()
         current_jam:init(io)
     end
 
-    local tickInterval = (60 / io.tempo) / io.tpb -- seconds per tick
+    local tickInterval = (60 / io.bpm) / io.tpb -- seconds per tick
     local start_time = socket.gettime()
     local tick_number = 0
     local missed_ticks = 0
     local max_catch_up = 5  -- Don't try to catch up more than 5 ticks at once
 
     print(string.format("Starting Jam system with OSC output to localhost:9000"))
-    print(string.format("Tempo: %d BPM, TPB: %d, Tick interval: %.4f ms", 
-                        io.tempo, io.tpb, tickInterval * 1000))
+    print(string.format("bpm: %d BPM, TPB: %d, Tick interval: %.4f ms", 
+                        io.bpm, io.tpb, tickInterval * 1000))
 
     while true do
         local current_time = socket.gettime()
