@@ -93,8 +93,7 @@ end
 
 function Note:play(io, c)
     local ch = c or self.channel or io.ch
-    local dur =  self.duration * io.tt
-    io.playNote(self.number, self.velocity, dur, ch)
+    io.playNote(self.number, self.velocity, self.duration, ch)
 end
 
 return {

@@ -7,7 +7,7 @@ local function initIO(tpb, osc_host, osc_port)
     local io = {}
     io.tpb = tpb or 180
     io.bpm = 101
-    io.tt = (60 / io.bpm) / io.tpb * 1000  -- tick time
+    io.spt = (60 / io.bpm) / io.tpb * 1000  -- tick time
     io.beat_count = 0
     io.tick_count = 0
     io.ch = 1
@@ -23,10 +23,11 @@ local function initIO(tpb, osc_host, osc_port)
         local ch = channel or io.ch
         -- Create and send note message
         -- Convert duration to seconds
+        dur = math.floor(duration * io.spt)
         local note_message = osc.new_message {
             address = '/note',
             types = 'iiii',
-            math.floor(note), math.floor(velocity), math.floor(duration), math.floor(ch)
+            math.floor(note), math.floor(velocity), dur, math.floor(ch)
         }
         osc:send(note_message)
     end
