@@ -4,14 +4,30 @@ local losc = require("losc")
 local plugin = require("losc.plugins.udp-socket")
 
 local function initIO(tpb, osc_host, osc_port)
+
     local io = {}
-    io.tpb = tpb or 180
-    io.bpm = 101
-    io.spt = (60 / io.bpm) / io.tpb * 1000  -- tick time
+    io.tpb = tpb or 180                    -- ticks per beat (user configurable)
+    io.bpm = 101                           -- beats per minute 
+    io.mspt = (60 / io.bpm) / io.tpb * 1000 -- milliseconds per tick
+    io.tc = 0                              -- tick count (global counter, starts at 0)
     io.beat_count = 0
     io.tick_count = 0
     io.ch = 1
-    
+
+    -- Checks if the current global tick count matches a rhythmic interval.
+    io.every = function(a, b)
+        a = a or 1
+        b = b or 1
+        return io.tc % ((io.tpb * a) // b) == 0
+    end
+
+    -- Calculate tick intervals, number of ticks in a rhythmic interval.
+    io.t = function(a, b)
+        a = a or 1
+        b = b or 1
+        return (io.tpb * a) // b
+    end
+
     -- Create OSC client using losc
     local udp = plugin.new {sendAddr = osc_host or 'localhost', sendPort = osc_port or 9000}
     local osc = losc.new {plugin = udp}
@@ -23,11 +39,14 @@ local function initIO(tpb, osc_host, osc_port)
         local ch = channel or io.ch
         -- Create and send note message
         -- Convert duration to seconds
-        dur = math.floor(duration * io.spt)
+        dur = math.floor(duration * io.mspt)
         local note_message = osc.new_message {
             address = '/note',
             types = 'iiii',
-            math.floor(note), math.floor(velocity), dur, math.floor(ch)
+            math.floor(note), 
+            math.floor(velocity), 
+            dur, 
+            math.floor(ch)
         }
         osc:send(note_message)
     end
@@ -87,6 +106,7 @@ local function run()
                     io.tick_count = tick_number % io.tpb
                     current_jam:tick(io)
                     tick_number = tick_number + 1
+                    io.tc = io.tc + 1                          -- Global tick counter
                 end
             end
         elseif ticks_behind == 0 and tick_number == expected_tick then
@@ -95,6 +115,7 @@ local function run()
             io.tick_count = tick_number % io.tpb
             current_jam:tick(io)
             tick_number = tick_number + 1
+            io.tc = io.tc + 1                          -- Global tick counter
         end
         
         -- Sleep until next tick is due

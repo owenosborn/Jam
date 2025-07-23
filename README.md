@@ -183,19 +183,35 @@ end
 The `io` object passed to `tick()` provides:
 
 ```lua
-io = {
-    tpb = 180,                    -- ticks per beat (configurable)
-    tempo = 120,                  -- BPM
-    beat_count = 0,               -- current beat number
-    tick_count = 0,               -- current tick within beat
-    
-    -- Core output function, output channel is 1 if not given
+    local io = {}
+    io.tpb = tpb or 180                     -- ticks per beat 
+    io.bpm = 101                            -- beats per minute 
+    io.mspt = (60 / io.bpm) / io.tpb * 1000 -- milliseconds per tick
+    io.tc = 0                               -- tick count (global counter, starts at 0)
+    io.beat_count = 0                       -- current beat number
+    io.tick_count = 0                       -- tick within beat
+    io.ch = 1                               -- default midi ch
+
+    -- Checks if the current global tick count matches a rhythmic interval.
+    io.every = function(a, b)
+        a = a or 1
+        b = b or 1
+        return io.tc % ((io.tpb * a) // b) == 0
+    end
+
+    -- Calculate tick intervals, number of ticks in a rhythmic interval.
+    io.t = function(a, b)
+        a = a or 1
+        b = b or 1
+        return (io.tpb * a) // b
+    end
+
+    -- Core output function
     playNote = function(number, velocity, duration, channel) end,
     
     -- Future extensions could include:
     -- playCC = function(controller, value) end,
     -- setBPM = function(bpm) end,
-}
 ```
 
 ## Extended Functionality
