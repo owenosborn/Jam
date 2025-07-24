@@ -22,7 +22,7 @@ local function initIO(tpb, osc_host, osc_port)
     end
 
     -- Calculate tick intervals, number of ticks in a rhythmic interval.
-    io.t = function(a, b)
+    io.ticks = function(a, b)
         a = a or 1
         b = b or 1
         return (io.tpb * a) // b
