@@ -15,14 +15,14 @@ local function initIO(tpb, osc_host, osc_port)
     io.ch = 1
 
     -- Checks if the current global tick count matches a rhythmic interval.
-    io.every = function(a, b)
+    io.on = function(a, b)
         a = a or 1
         b = b or 1
         return io.tc % ((io.tpb * a) // b) == 0
     end
 
     -- Calculate tick intervals, number of ticks in a rhythmic interval.
-    io.ticks = function(a, b)
+    io.dur = function(a, b)
         a = a or 1
         b = b or 1
         return (io.tpb * a) // b
