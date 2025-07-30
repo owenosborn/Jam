@@ -1,7 +1,5 @@
 -- lib/chord_parser.lua
 
-local chord_parser = {}
-
 -- Utility function to split a string by a separator
 function string:split(sep)
     local fields = {}
@@ -131,8 +129,12 @@ local function construct_chord(chord_data)
     return pitches
 end
 
--- Parse chord string and populate Chord object
-function chord_parser.parse(chord, chord_string)
+-- Get the Chord class from elements
+local elements = require("lib/elements")
+local Chord = elements.Chord
+
+-- Add parse method to Chord
+function Chord:parse(chord_string)
     -- Parse the chord string
     local parsed = parse_chord_text(chord_string)
 
@@ -140,19 +142,12 @@ function chord_parser.parse(chord, chord_string)
     local chord_pitches = construct_chord(parsed)
 
     -- Set the chord object's properties
-    chord.pitches = chord_pitches
-    chord.root = note_to_pitch_class(parsed.root)
-    chord.bass = parsed.bass and note_to_pitch_class(parsed.bass) or chord.root
-    chord.name = chord_string
+    self.pitches = chord_pitches
+    self.root = note_to_pitch_class(parsed.root)
+    self.bass = parsed.bass and note_to_pitch_class(parsed.bass) or self.root
+    self.name = chord_string
 
-    return chord
+    return self
 end
 
--- Convenience function to create and parse a chord in one step
-function chord_parser.from_string(chord_string)
-    local elements = require("lib/elements")
-    local chord = elements.Chord.new()
-    return chord_parser.parse(chord, chord_string)
-end
-
-return chord_parser
+return {}
