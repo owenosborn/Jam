@@ -18,10 +18,10 @@ Chord = {}
 Chord.__index = Chord
 function Chord.new()
     local self = setmetatable({}, Chord)
-    self.pitches = {}      -- array of MIDI note numbers
-    self.root = 60         -- root note
+    self.pitches = {}      -- array of pitches in one octave
+    self.root = 0          -- root note
     self.bass = 0          -- bass note (0 = use root)
-    self.name = ""         -- chord symbol e.g. "Am7"
+    self.name = ""         -- chord symbol e.g. "A-7"
     return self
 end
 
@@ -94,6 +94,27 @@ end
 function Note:play(io, c)
     local ch = c or self.channel or io.ch
     io.playNote(self.number, self.velocity, self.duration, ch)
+end
+
+function Chord:print(print_callback)
+    print_callback = print_callback or print
+    print_callback("Chord:")
+    local formatStr = "%-20s | %-6s | %-6s | %-9s"
+    local headerFormat = "%-20s | %-6s | %-6s | %-9s"
+    local separator = string.rep("-", 50)
+    print_callback(separator)
+    print_callback(string.format(headerFormat, "Pitches", "Root", "Bass", "Name"))
+    print_callback(separator)
+    local pitches_str = table.concat(self.pitches, ", ")
+    local info = string.format(
+        formatStr,
+        "[" .. pitches_str .. "]",
+        tostring(self.root),
+        tostring(self.bass),
+        self.name
+    )
+    print_callback(info)
+    print_callback(separator)
 end
 
 return {

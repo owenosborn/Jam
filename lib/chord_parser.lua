@@ -1,0 +1,158 @@
+-- lib/chord_parser.lua
+
+local chord_parser = {}
+
+-- Utility function to split a string by a separator
+function string:split(sep)
+    local fields = {}
+    self:gsub("([^"..sep.."]*)",
+        function(c) fields[#fields+1] = c end)
+    return fields 
+end
+
+-- Convert note name to pitch class (0-11)
+local function note_to_pitch_class(note)
+    local pitch_classes = {
+        ["C"] = 0, ["C#"] = 1, ["Db"] = 1, ["D"] = 2, ["D#"] = 3, ["Eb"] = 3, ["E"] = 4,
+        ["F"] = 5, ["F#"] = 6, ["Gb"] = 6, ["G"] = 7, ["G#"] = 8, ["Ab"] = 8, ["A"] = 9,
+        ["A#"] = 10, ["Bb"] = 10, ["B"] = 11,
+    }
+    if pitch_classes[note] then
+        return pitch_classes[note]
+    else
+        error("Invalid note "..note)
+    end
+end
+
+-- Parse chord text into components
+local function parse_chord_text(chord_text)
+    local root
+    local quality
+    local extension = ""
+    local bass
+
+    -- Extract the root note
+    local root_character = chord_text:sub(1, 1)
+    local next_character = chord_text:sub(2, 2)
+
+    if next_character == '#' or next_character == 'b' then
+        root = root_character .. next_character
+        chord_text = chord_text:sub(3)
+    else
+        root = root_character
+        chord_text = chord_text:sub(2)
+    end
+
+    -- Check the quality
+    local quality_marker = chord_text:sub(1, 1)
+    if quality_marker == '-' then
+        quality = 'min'
+        chord_text = chord_text:sub(2)
+    elseif quality_marker == '+' then
+        quality = 'aug'
+        chord_text = chord_text:sub(2)
+    elseif quality_marker == 'o' then
+        quality = 'dim'
+        chord_text = chord_text:sub(2)
+    else
+        quality = 'maj'
+    end
+
+    -- Extract extension and bass note if they exist
+    local split_by_bass = chord_text:split('/')
+    if #split_by_bass > 1 then
+        bass = split_by_bass[2]
+        extension = split_by_bass[1]
+    else
+        extension = split_by_bass[1]
+    end
+
+    return {
+        root = root,
+        quality = quality,
+        extension = extension,
+        bass = bass,
+    }
+end
+
+-- Define chord quality calculator (returns pitch class intervals)
+local quality = {
+    maj = function() return {0, 4, 7} end,
+    min = function() return {0, 3, 7} end,
+    dim = function() return {0, 3, 6} end,
+    aug = function() return {0, 4, 8} end,
+}
+
+-- Define how to process each extension (adds pitch class intervals)
+local extension = {
+    ["6"] = function(pitches, chord) table.insert(pitches, 9) end,
+    ["maj7"] = function(pitches, chord) table.insert(pitches, 11) end,
+    ["7"] = function(pitches, chord) 
+                if chord.quality == "dim" then
+                    table.insert(pitches, 9)  -- dim7
+                else
+                    table.insert(pitches, 10) -- dom7
+                end
+            end,
+    ["9"] = function(pitches, chord) table.insert(pitches, 2) end,  -- 9th = 2nd up octave
+    ["b9"] = function(pitches, chord) table.insert(pitches, 1) end, -- b9 = b2nd up octave
+    ["11"] = function(pitches, chord) table.insert(pitches, 5) end, -- 11th = 4th up octave
+    ["#11"] = function(pitches, chord) table.insert(pitches, 6) end, -- #11 = #4th up octave
+    ["13"] = function(pitches, chord) table.insert(pitches, 9) end,  -- 13th = 6th up octave
+    ["7b5"] = function(pitches, chord) 
+                table.insert(pitches, 10) -- add dom7
+                pitches[3] = 6 -- flatten the 5th
+              end,
+}
+
+-- Construct chord from parsed components
+local function construct_chord(chord_data)
+    -- Get base triad as pitch classes
+    local pitches = quality[chord_data.quality]()
+
+    -- Apply extensions
+    if chord_data.extension and chord_data.extension ~= "" then
+        local exts = chord_data.extension:split(',')
+        for _, ext in ipairs(exts) do
+            local ext_func = extension[ext]
+            if ext_func then
+                ext_func(pitches, chord_data)
+            else
+                print("Warning: Unrecognized extension ".. ext .. ". Skipping.")
+            end
+        end
+    end
+
+    -- Normalize all pitch classes to 0-11
+    for i = 1, #pitches do
+        pitches[i] = pitches[i] % 12
+    end
+
+    return pitches
+end
+
+-- Parse chord string and populate Chord object
+function chord_parser.parse(chord, chord_string)
+    -- Parse the chord string
+    local parsed = parse_chord_text(chord_string)
+
+    -- Construct the chord pitches
+    local chord_pitches = construct_chord(parsed)
+
+    -- Set the chord object's properties
+    chord.pitches = chord_pitches
+    chord.root = note_to_pitch_class(parsed.root)
+    chord.bass = parsed.bass and note_to_pitch_class(parsed.bass) or chord.root
+    chord.name = chord_string
+
+    return chord
+end
+
+-- Convenience function to create and parse a chord in one step
+function chord_parser.from_string(chord_string)
+    local elements = require("lib/elements")
+    local chord = elements.Chord.new()
+    return chord_parser.parse(chord, chord_string)
+end
+
+return chord_parser
