@@ -18,10 +18,10 @@ Chord = {}
 Chord.__index = Chord
 function Chord.new()
     local self = setmetatable({}, Chord)
-    self.pitches = {}      -- array of pitches in one octave
-    self.root = 0          -- root note
-    self.bass = 0          -- bass note (0 = use root)
-    self.name = ""         -- chord symbol e.g. "A-7"
+    self.pitches = {}      -- array of pitches, starting from 0, can be more than one octave for extensions
+    self.root = 0         -- root note pitch class, 0-11
+    self.bass = 0          -- bass note for slash chords, pitch class 0-11
+    self.name = ""         -- chord symbol e.g. "Am7"
     return self
 end
 
