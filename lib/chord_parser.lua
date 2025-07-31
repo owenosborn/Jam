@@ -81,22 +81,22 @@ local quality = {
     aug = function() return {0, 4, 8} end,
 }
 
--- Define how to process each extension (adds pitch class intervals)
+-- Define how to process each extension (adds pitch class intervals with proper octaves)
 local extension = {
-    ["6"] = function(pitches, chord) table.insert(pitches, 9) end,
-    ["maj7"] = function(pitches, chord) table.insert(pitches, 11) end,
+    ["6"] = function(pitches, chord) table.insert(pitches, 9) end,     -- 6th in same octave
+    ["maj7"] = function(pitches, chord) table.insert(pitches, 11) end, -- maj7 in same octave
     ["7"] = function(pitches, chord) 
                 if chord.quality == "dim" then
-                    table.insert(pitches, 9)  -- dim7
+                    table.insert(pitches, 9)  -- dim7 (actually bb7)
                 else
                     table.insert(pitches, 10) -- dom7
                 end
             end,
-    ["9"] = function(pitches, chord) table.insert(pitches, 2) end,  -- 9th = 2nd up octave
-    ["b9"] = function(pitches, chord) table.insert(pitches, 1) end, -- b9 = b2nd up octave
-    ["11"] = function(pitches, chord) table.insert(pitches, 5) end, -- 11th = 4th up octave
-    ["#11"] = function(pitches, chord) table.insert(pitches, 6) end, -- #11 = #4th up octave
-    ["13"] = function(pitches, chord) table.insert(pitches, 9) end,  -- 13th = 6th up octave
+    ["9"] = function(pitches, chord) table.insert(pitches, 14) end,    -- 9th = 2nd + octave
+    ["b9"] = function(pitches, chord) table.insert(pitches, 13) end,   -- b9 = b2nd + octave
+    ["11"] = function(pitches, chord) table.insert(pitches, 17) end,   -- 11th = 4th + octave
+    ["#11"] = function(pitches, chord) table.insert(pitches, 18) end,  -- #11 = #4th + octave
+    ["13"] = function(pitches, chord) table.insert(pitches, 21) end,   -- 13th = 6th + octave
     ["7b5"] = function(pitches, chord) 
                 table.insert(pitches, 10) -- add dom7
                 pitches[3] = 6 -- flatten the 5th
@@ -108,7 +108,7 @@ local function construct_chord(chord_data)
     -- Get base triad as pitch classes
     local pitches = quality[chord_data.quality]()
 
-    -- Apply extensions
+    -- Apply extensions (keeping proper octaves)
     if chord_data.extension and chord_data.extension ~= "" then
         local exts = chord_data.extension:split(',')
         for _, ext in ipairs(exts) do
@@ -121,10 +121,8 @@ local function construct_chord(chord_data)
         end
     end
 
-    -- Normalize all pitch classes to 0-11
-    for i = 1, #pitches do
-        pitches[i] = pitches[i] % 12
-    end
+    -- Don't normalize to 0-11 anymore - keep octave information
+    -- Users can mod 12 if they want true pitch classes
 
     return pitches
 end
