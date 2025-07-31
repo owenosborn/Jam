@@ -117,6 +117,13 @@ function Chord:print(print_callback)
     print_callback(separator)
 end
 
+function Chord:note(index, octave)
+    octave = octave or 5  -- default to octave 5 (60 = C5)
+    index = ((index - 1) % #self.pitches) + 1
+    return self.pitches[index] + self.root + (octave * 12)
+end
+
+
 return {
     Note = Note,
     Chord = Chord,

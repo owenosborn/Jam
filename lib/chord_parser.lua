@@ -1,4 +1,9 @@
 -- lib/chord_parser.lua
+-- Chord parsing module that adds parse() method to Chord class
+-- Converts chord symbols like "C-7", "F#maj7", "Bb7b5" into pitch arrays
+-- Supports major/minor/dim/aug qualities and extensions (6, 7, 9, 11, 13)
+-- Example: chord:parse("Am7") sets pitches to [0, 3, 7, 10]
+
 
 -- Utility function to split a string by a separator
 function string:split(sep)
