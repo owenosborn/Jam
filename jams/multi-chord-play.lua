@@ -23,6 +23,7 @@ function jam:init(io)
 end
 
 function jam:tick(io)
+
     -- Change chord every 4 beats
     if io.on(4) then 
         self.chord_index = (self.chord_index % #self.chords) + 1

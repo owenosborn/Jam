@@ -2,12 +2,11 @@
 
 local jam = {}
 
-local elements = require("lib/elements")
+local Chord = require("lib/chord")
 local ChordPlayer = require("lib/chord_player")
-require("lib/chord_parser")
 
 function jam:init(io)
-    self.chord = elements.Chord.new()
+    self.chord = Chord.Chord.new()
     self.chord:parse("C-7")  -- C minor 7    
     self.chord:print()
     self.c=1

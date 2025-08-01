@@ -13,18 +13,6 @@ function Note.new(params)
     return self
 end
 
--- collection of pitches 
-Chord = {}
-Chord.__index = Chord
-function Chord.new()
-    local self = setmetatable({}, Chord)
-    self.pitches = {}      -- array of pitches, starting from 0, can be more than one octave for extensions
-    self.root = 0         -- root note pitch class, 0-11
-    self.bass = 0          -- bass note for slash chords, pitch class 0-11
-    self.name = ""         -- chord symbol e.g. "Am7"
-    return self
-end
-
 -- collection of notes in time
 Pattern = {}
 Pattern.__index = Pattern
@@ -96,37 +84,8 @@ function Note:play(io, c)
     io.playNote(self.number, self.velocity, self.duration, ch)
 end
 
-function Chord:print(print_callback)
-    print_callback = print_callback or print
-    print_callback("Chord:")
-    local formatStr = "%-20s | %-6s | %-6s | %-9s"
-    local headerFormat = "%-20s | %-6s | %-6s | %-9s"
-    local separator = string.rep("-", 50)
-    print_callback(separator)
-    print_callback(string.format(headerFormat, "Pitches", "Root", "Bass", "Name"))
-    print_callback(separator)
-    local pitches_str = table.concat(self.pitches, ", ")
-    local info = string.format(
-        formatStr,
-        "[" .. pitches_str .. "]",
-        tostring(self.root),
-        tostring(self.bass),
-        self.name
-    )
-    print_callback(info)
-    print_callback(separator)
-end
-
-function Chord:note(index, octave)
-    octave = octave or 5  -- default to octave 5 (60 = C5)
-    index = ((index - 1) % #self.pitches) + 1
-    return self.pitches[index] + self.root + (octave * 12)
-end
-
-
 return {
     Note = Note,
-    Chord = Chord,
     Pattern = Pattern,
     Progression = Progression,
     Counter = Counter

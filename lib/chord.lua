@@ -1,9 +1,8 @@
--- lib/chord_parser.lua
--- Chord parsing module that adds parse() method to Chord class
+-- lib/chord.lua
+-- Unified chord module combining Chord class and parsing functionality
 -- Converts chord symbols like "C-7", "F#maj7", "Bb7b5" into pitch arrays
 -- Supports major/minor/dim/aug qualities and extensions (6, 7, 9, 11, 13)
--- Example: chord:parse("Am7") sets pitches to [0, 3, 7, 10]
-
+-- Example: chord:parse("A-7") sets pitches to [0, 3, 7, 10]
 
 -- Utility function to split a string by a separator
 function string:split(sep)
@@ -132,11 +131,20 @@ local function construct_chord(chord_data)
     return pitches
 end
 
--- Get the Chord class from elements
-local elements = require("lib/elements")
-local Chord = elements.Chord
+-- Chord class definition
+Chord = {}
+Chord.__index = Chord
 
--- Add parse method to Chord
+function Chord.new()
+    local self = setmetatable({}, Chord)
+    self.pitches = {}      -- array of pitches, starting from 0, can be more than one octave for extensions
+    self.root = 0         -- root note pitch class, 0-11
+    self.bass = 0          -- bass note for slash chords, pitch class 0-11
+    self.name = ""         -- chord symbol e.g. "A-7"
+    return self
+end
+
+-- Parse chord symbol and set chord properties
 function Chord:parse(chord_string)
     -- Parse the chord string
     local parsed = parse_chord_text(chord_string)
@@ -153,4 +161,35 @@ function Chord:parse(chord_string)
     return self
 end
 
-return {}
+-- Get specific note from chord at given index and octave
+function Chord:note(index, octave)
+    octave = octave or 5  -- default to octave 5 (60 = C5)
+    index = ((index - 1) % #self.pitches) + 1
+    return self.pitches[index] + self.root + (octave * 12)
+end
+
+-- Print chord information
+function Chord:print(print_callback)
+    print_callback = print_callback or print
+    print_callback("Chord:")
+    local formatStr = "%-20s | %-6s | %-6s | %-9s"
+    local headerFormat = "%-20s | %-6s | %-6s | %-9s"
+    local separator = string.rep("-", 50)
+    print_callback(separator)
+    print_callback(string.format(headerFormat, "Pitches", "Root", "Bass", "Name"))
+    print_callback(separator)
+    local pitches_str = table.concat(self.pitches, ", ")
+    local info = string.format(
+        formatStr,
+        "[" .. pitches_str .. "]",
+        tostring(self.root),
+        tostring(self.bass),
+        self.name
+    )
+    print_callback(info)
+    print_callback(separator)
+end
+
+return {
+    Chord = Chord
+}
