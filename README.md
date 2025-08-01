@@ -95,7 +95,7 @@ return utils
 
 ## Elemental Music Objects
 
-All core musical objects are defined in `lib/elements.lua`:
+Musical objects are defined in `lib/elements.lua`:
 
 ### Note
 Basic unit of musical information:
@@ -109,53 +109,6 @@ function Note.new()
     self.velocity = 100     -- MIDI velocity (0-127)
     self.duration = 90      -- note duration in ticks
     self.time = 0           -- start time offset in ticks
-    return self
-end
-```
-
-### Chord
-Collection of pitches:
-
-```lua
-Chord = {}
-Chord.__index = Chord
-function Chord.new()
-    local self = setmetatable({}, Chord)
-    self.pitches = {}      -- array of pitches, starting from 0, can be more than one octave for extensions
-    self.root = 0         -- root note pitch class, 0-11
-    self.bass = 0          -- bass note for slash chords, pitch class 0-11
-    self.name = ""         -- chord symbol e.g. "Am7"
-    return self
-end
-```
-
-### Pattern
-Collection of notes with timing:
-
-```lua
-Pattern = {}
-Pattern.__index = Pattern
-function Pattern.new()
-    local self = setmetatable({}, Pattern)
-    self.notes = {}               -- array of Note objects
-    self.length = 0               -- total length in ticks
-    self.playhead = 0             -- current position in ticks
-    return self
-end
-```
-
-### Progression
-Collection of chords with timing:
-
-```lua
-Progression = {}
-Progression.__index = Progression
-function Progression.new()
-    local self = setmetatable({}, Progression)
-    self.chords = {}            -- array of Chord objects
-    self.durations = {}         -- duration of each chord in ticks
-    self.length = 0             -- total length in ticks  
-    self.playhead = 0           -- current position in ticks
     return self
 end
 ```
@@ -178,6 +131,16 @@ function Counter:tick()
     return self.count == 0  -- returns true on rollover
 end
 ```
+
+### Chord
+
+defined in lib/chord.lua
+Collection of pitches, root note, optional bass note, and name. includes parsing function
+
+### Progression
+
+defined in lib/chord.lua
+Collection chors in time, with parsing funciton
 
 ## IO Object
 The `io` object passed to `tick()` provides:

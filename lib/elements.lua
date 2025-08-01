@@ -24,18 +24,6 @@ function Pattern.new()
     return self
 end
 
--- collection of chords in time
-Progression = {}
-Progression.__index = Progression
-function Progression.new()
-    local self = setmetatable({}, Progression)
-    self.chords = {}            -- array of Chord objects
-    self.durations = {}         -- duration of each chord in ticks
-    self.length = 0             -- total length in ticks  
-    self.playhead = 0           -- current position in ticks
-    return self
-end
-
 Counter = {}
 Counter.__index = Counter
 function Counter.new(max)
