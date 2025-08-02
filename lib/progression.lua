@@ -59,8 +59,8 @@ function Progression:tick(io)
     -- Get current chord (updates self.index)
     local current_chord = self:current(io)
     
-    -- Set chord_changed flag if index changed
-    self.chord_changed = (self.index ~= prev_index)
+    -- Set chord_changed flag if index changed OR if this is the very first tick (time == 1)
+    self.chord_changed = (self.index ~= prev_index) or (self.time == 1)
     
     return current_chord
 end
