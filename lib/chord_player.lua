@@ -10,7 +10,16 @@ ChordPlayer.__index = ChordPlayer
 
 function ChordPlayer.new(chord, octave)
     local self = setmetatable({}, ChordPlayer)
-    self.chord = chord
+    
+    -- Create default C major chord if none provided
+    if chord == nil then
+        local default_chord = require("lib/chord").Chord.new()
+        default_chord:parse("Cmaj7")
+        self.chord = default_chord
+    else
+        self.chord = chord
+    end
+    
     self.octave = octave or 5
     self.style = "block"  -- default style
     self.config = {}

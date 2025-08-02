@@ -1,5 +1,5 @@
 -- lib/progression.lua
--- Unified progression module for chord progressions in time
+-- Enhanced progression module with new chord detection
 -- Collection of chords with timing and playback control
 -- Supports automatic playhead advancement and chord indexing
 
@@ -15,6 +15,8 @@ function Progression.new()
     self.playhead = 0           -- current position in ticks
     self.time = 0               -- current time position
     self.index = 1              -- current chord index
+    self.last_index = 0         -- previous chord index for new chord detection
+    self.chord_changed = true   -- flag for new chord detection (true initially for first chord)
     return self
 end
 
@@ -45,12 +47,30 @@ function Progression:current(io)
     return self.chords[#self.chords]
 end
 
--- Advance playhead by one tick
+-- Advance playhead by one tick and detect chord changes
 function Progression:tick(io)
     local total_ticks = io.dur(self.length_beats)
     self.playhead = (self.playhead + 1) % total_ticks
     self.time = self.time + 1
-    return self:current(io)
+    
+    -- Store previous index
+    local prev_index = self.index
+    
+    -- Get current chord (updates self.index)
+    local current_chord = self:current(io)
+    
+    -- Set chord_changed flag if index changed
+    self.chord_changed = (self.index ~= prev_index)
+    
+    return current_chord
+end
+
+-- Check if we just moved to a new chord
+-- Returns true on first call after progression is loaded
+function Progression:isnew()
+    local result = self.chord_changed
+    self.chord_changed = false  -- Reset flag after checking
+    return result
 end
 
 -- Reset playhead to beginning
@@ -58,13 +78,18 @@ function Progression:reset()
     self.playhead = 0
     self.time = 0
     self.index = 1
+    self.last_index = 0
+    self.chord_changed = false
 end
 
 -- Set playhead to specific position
 function Progression:seek(position, io)
     local total_ticks = io.dur(self.length_beats)
     self.playhead = math.max(0, math.min(position, total_ticks - 1))
-    return self:current(io)
+    local prev_index = self.index
+    local current_chord = self:current(io)
+    self.chord_changed = (self.index ~= prev_index)
+    return current_chord
 end
 
 -- Parse progression string and build progression
