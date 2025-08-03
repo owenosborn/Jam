@@ -8,8 +8,7 @@ local Arpeggio = require("lib/arpeggio").Arpeggio
 function jam:init(io)
     -- Create a ii-V-I-VI progression using parse string
     self.prog = progression.Progression.new()
-    --self.prog:parse("D-7...G7...Cmaj7...A7...")
-    self.prog:parse("C-9...F13...Bbmaj7,#11...Ebmaj7...A-7b5...D7,b9...G-7...C7...") 
+    self.prog:parse("D-7...G7...Cmaj7...A7...")
     
     -- Print the progression
     self.prog:print()
@@ -19,14 +18,14 @@ function jam:init(io)
     self.player:setStyle("roll", {delay = io.dur(1/8)})
     
     -- Create multiple arpeggios for different musical layers
-    self.melody_arp = Arpeggio.new(nil, "updown", 2, 4)    -- High melody arpeggio
+    self.melody_arp = Arpeggio.new(nil, "updown", 2, 6)    -- High melody arpeggio
     self.bass_arp = Arpeggio.new(nil, "up", 1, 3)          -- Bass arpeggio
-    self.counter_arp = Arpeggio.new(nil, "random", 1, 3)   -- Counter-melody
+    self.counter_arp = Arpeggio.new(nil, "random", 1, 5)   -- Counter-melody
     
     -- Set different timing for each arpeggio
-    self.melody_arp:setTiming(io.dur(1), io.dur(1/8))    -- Sixteenth note triplets
-    self.bass_arp:setTiming(io.dur(1), io.dur(1/4))      -- Half note steps
-    self.counter_arp:setTiming(io.dur(1), io.dur(1/6))   -- Quarter note steps
+    self.melody_arp:setTiming(io.dur(1/2), io.dur(1/8))    -- Sixteenth note triplets
+    self.bass_arp:setTiming(io.dur(1/2), io.dur(1/4))      -- Half note steps
+    self.counter_arp:setTiming(io.dur(1/2), io.dur(1/6))   -- Quarter note steps
 end
 
 function jam:tick(io)
@@ -76,17 +75,17 @@ function jam:tick(io)
     
     -- Start melody arpeggio on beat 2
     if io.on(1) and io.beat_count % 4 == 1 then  -- Beat 2 of every measure
-        self.melody_arp:play(60, io.dur(1/8), io.dur(1/6))
+        self.melody_arp:play(60, io.dur(1/8), io.dur(1/6), io)
     end
     
     -- Start bass arpeggio pattern
     if io.on(1/2) then  -- Every half note
-        self.bass_arp:play(80, io.dur(1/4), io.dur(1/2))
+        self.bass_arp:play(80, io.dur(1/4), io.dur(1/2), io)
     end
     
     -- Trigger counter melody occasionally
     if io.on(1/4) and math.random() < 0.4 then  -- 40% chance every quarter note
-        self.counter_arp:play(45, io.dur(1/6), io.dur(1/4))
+        self.counter_arp:play(45, io.dur(1/6), io.dur(1/4), io)
     end
     
     -- Stop arpeggios occasionally for breathing room

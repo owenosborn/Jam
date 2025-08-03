@@ -22,7 +22,7 @@ function Arpeggio.new(chord, pattern, octaves, octave_base)
     self.note_duration = 90         -- default note duration in ticks
     self.velocity = 80              -- default velocity
     self.step_interval = 45         -- ticks between notes
-    self.next_note_tick = 0         -- when to play next note
+    self.start_tick = 0             -- global tick when arpeggio started
     
     self:_generate_sequence()
     return self
@@ -95,14 +95,14 @@ function Arpeggio:_generate_sequence()
 end
 
 -- Start playing the arpeggio
-function Arpeggio:play(velocity, note_duration, step_interval)
+function Arpeggio:play(velocity, note_duration, step_interval, io)
     self.velocity = velocity or self.velocity
     self.note_duration = note_duration or self.note_duration
     self.step_interval = step_interval or self.step_interval
     
     self.active = true
     self.index = 1
-    self.next_note_tick = 0  -- Play first note immediately
+    self.start_tick = io.tc  -- Sync to global tick count
     return self
 end
 
@@ -146,24 +146,19 @@ function Arpeggio:tick(io)
         return
     end
     
-    -- Check if it's time to play the next note
-    if self.next_note_tick <= 0 then
-        -- Play current note
-        local note = self.notes[self.index]
+    -- Calculate which note should be playing based on global tick count
+    local ticks_since_start = io.tc - self.start_tick
+    local note_position = math.floor(ticks_since_start / self.step_interval)
+    local expected_index = (note_position % #self.notes) + 1
+    
+    -- Check if we should play a note on this exact tick
+    if ticks_since_start % self.step_interval == 0 and ticks_since_start >= 0 then
+        local note = self.notes[expected_index]
         io.playNote(note, self.velocity, self.note_duration)
-        
-        -- Advance to next note
-        self.index = self.index + 1
-        if self.index > #self.notes then
-            self.index = 1  -- Loop back to start
-        end
-        
-        -- Schedule next note
-        self.next_note_tick = self.step_interval
-    else
-        -- Count down to next note
-        self.next_note_tick = self.next_note_tick - 1
     end
+    
+    -- Update current index for reference
+    self.index = expected_index
 end
 
 -- Get current note without playing
