@@ -17,6 +17,9 @@ end
 
 -- Add chord to progression with specified duration in beats
 function Progression:add(chord, beats)
+    chord.time = self.length_beats  -- Set chord's start time
+    table.insert(self.chords, chord)
+    self.length_beats = self.length_beats + beats
     return self
 end
 
@@ -40,6 +43,7 @@ end
 function Progression:parse(prog_string)
     -- Clear existing progression
     self.chords = {}
+    self.length_beats = 0
     self:reset()
     
     -- Remove spaces
@@ -77,39 +81,31 @@ end
 function Progression:print(print_callback)
     print_callback = print_callback or print
     print_callback("Progression:")
-    local headerFormat = "%-7s | %-20s | %-6s | %-6s | %-6s | %-6s | %-9s"
-    local separator = string.rep("-", 80)
+    local headerFormat = "%-7s | %-6s | %-20s | %-6s | %-6s | %-9s"
+    local separator = string.rep("-", 70)
     print_callback(separator)
-    print_callback(string.format(headerFormat, "Index", "Notes", "Root", "Bass", "Time", "Beats", "Name"))
+    print_callback(string.format(headerFormat, "Index", "Time", "Notes", "Root", "Bass", "Name"))
     print_callback(separator)
     
-    local time_pos = 0
     for idx, chord in ipairs(self.chords) do
-        local beats = self.beats[idx] or 0
-        if chord.print_row then
-            chord:print_row(print_callback, idx, time_pos, beats)
-        else
-            local pitches_str = table.concat(chord.pitches or {}, ", ")
-            local formatStr = "%-7s | %-20s | %-6s | %-6s | %-6s | %-6s | %-9s"
-            local info = string.format(
-                formatStr,
-                tostring(idx),
-                "[" .. pitches_str .. "]",
-                tostring(chord.root or 0),
-                tostring(chord.bass or 0),
-                tostring(time_pos),
-                tostring(beats),
-                chord.name or ""
-            )
-            print_callback(info)
-        end
-        time_pos = time_pos + beats
+        local pitches_str = table.concat(chord.pitches or {}, ", ")
+        local formatStr = "%-7s | %-6s | %-20s | %-6s | %-6s | %-9s"
+        local info = string.format(
+            formatStr,
+            tostring(idx),
+            tostring(chord.time or 0),
+            "[" .. pitches_str .. "]",
+            tostring(chord.root or 0),
+            tostring(chord.bass or 0),
+            chord.name or ""
+        )
+        print_callback(info)
     end
     
     print_callback(separator)
     print_callback(string.format(
-        "Length: %d beats (%d ticks), Time: %d ticks, Playhead: %d ticks, Index: %d",
-        self.length_beats, self.length_ticks, self.time, self.playhead, self.index
+        "Length: %d beats (%d ticks), Playhead: %d ticks, Index: %d",
+        self.length_beats, self.length_ticks, self.playhead, self.index
     ))
 end
 
