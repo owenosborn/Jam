@@ -23,20 +23,63 @@ function Progression:add(chord, beats)
     return self
 end
 
--- Get current chord - now O(1) instead of O(n)
+-- Get current chord
 function Progression:current()
+    if #self.chords == 0 then return nil end
+    return self.chords[self.index]
 end
 
 -- Advance the playhead
 function Progression:tick(io)
+    if #self.chords == 0 then return nil end
+    
+    -- Convert current playhead to beats for comparison
+    local playhead_beats = self.playhead / io.tpb
+    
+    -- Store previous chord_changed state
+    local was_changed = self.chord_changed
+    self.chord_changed = false
+    
+    -- Check if we need to advance to next chord
+    local next_chord_index = self.index + 1
+    if next_chord_index <= #self.chords then
+        local next_chord = self.chords[next_chord_index]
+        if playhead_beats >= next_chord.time then
+            self.index = next_chord_index
+            self.chord_changed = true
+        end
+    else
+        -- At last chord, check if we should loop
+        if playhead_beats >= self.length_beats then
+            self.playhead = 0
+            self.index = 1
+            self.chord_changed = true
+        end
+    end
+    
+    -- Keep the initial chord_changed true for first tick
+    if was_changed and self.playhead == 0 then
+        self.chord_changed = true
+    end
+    
+    -- Advance playhead
+    self.playhead = self.playhead + 1
+    
+    -- Return current chord
+    return self.chords[self.index]
 end
 
 -- Check if we just moved to a new chord
 function Progression:isnew()
+    return self.chord_changed
 end
 
 -- Reset playhead to beginning
 function Progression:reset()
+    self.playhead = 0
+    self.index = 1
+    self.chord_changed = true
+    return self
 end
 
 -- Parse progression string and build progression
