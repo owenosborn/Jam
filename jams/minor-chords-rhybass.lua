@@ -38,22 +38,22 @@ function jam:tick(io)
     
     -- Play chord on beat 1 of each measure
     if io.on(1) then
-        --self.player:play(40, io.dur(1))  -- Play for 3 beats
+        self.player:play(40, io.dur(1))  -- Play for 3 beats
     end
     
     -- Add some bass notes
     --if io.on(1/self.count2) and math.random() < 0.8 then  -- every half note
     if io.on(1/3) then
         self.count2 = math.random(1, 4)
-        local bass_note = chord_now:note(1, math.random(2,3))  -- root in octave 3
+        local bass_note = chord_now:note(1, math.random(2,4))  -- root in octave 3
         io.playNote(bass_note, 50, io.dur(1/8))
     end
     
     -- Add melody notes occasionally
     if io.on(1/self.count) and math.random() < 0.8 then  -- 30% chance every beat
-        local melody_note = chord_now:note(math.random(1, #chord_now.pitches), 5)
-        io.playNote(melody_note, 60, io.dur(1/self.count/2))
         self.count = math.random(1, 4)
+        local melody_note = chord_now:note(math.random(1, #chord_now.pitches), 4)
+       -- io.playNote(melody_note, 60, io.dur(1/4))
     end
 end
 
