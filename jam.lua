@@ -6,13 +6,11 @@ local progression = require("lib/progression")
 local ChordPlayer = require("lib/chord_player")
 
 function jam:init(io)
-    -- Create a ii-V-I-VI progression using parse string
     self.prog = progression.Progression.new()
-    --self.prog:parse("D-7,9...E-7,9...")
+    --sddelf.prog:parse("D-7,9...E-7,9...")
     self.prog:parse("D-7,9...E-7,9...A-7.A-9.A-11.A-9.A-7.")
     -- self.prog:parse("C-9...F13...Bbmaj7,#11...Ebmaj7...A-7b5...D7,b9...G-7...C7...") 
     
-    -- Print the progression
     self.prog:print()
     
     -- Create chord player for different articulations
@@ -20,7 +18,6 @@ function jam:init(io)
     self.player:setStyle("roll", {delay = io.dur(1/4)})
     self.count = 1    
     self.count2 = 1
-
 end
 
 function jam:tick(io)
@@ -38,22 +35,13 @@ function jam:tick(io)
     
     -- Play chord on beat 1 of each measure
     if io.on(1) then
-        --self.player:play(40, io.dur(1))  -- Play for 3 beats
-    end
-    
-    -- Add some bass notes
-    --if io.on(1/self.count2) and math.random() < 0.8 then  -- every half note
-    if io.on(1/3) then
+        self.player:play(40, io.dur(1))  
         self.count2 = math.random(1, 4)
-        local bass_note = chord_now:note(1, math.random(2,3))  -- root in octave 3
-        io.playNote(bass_note, 50, io.dur(1/8))
     end
     
-    -- Add melody notes occasionally
-    if io.on(1/self.count) and math.random() < 0.8 then  -- 30% chance every beat
-        local melody_note = chord_now:note(math.random(1, #chord_now.pitches), 5)
-        io.playNote(melody_note, 60, io.dur(1/self.count/2))
-        self.count = math.random(1, 4)
+    if io.on(1/self.count2) and math.random() < 0.8 then 
+        local n = chord_now:note(math.random(1, #chord_now.pitches), math.random(5,6)) 
+        io.playNote(n, 60, io.dur(1/16))
     end
 end
 
