@@ -8,18 +8,26 @@ local function initIO(tpb, osc_host, osc_port)
 
     local io = {}
     io.tpb = tpb or 180                    -- ticks per beat (user configurable)
-    io.bpm = 101                           -- beats per minute 
+    io.bpm = 100                        -- beats per minute 
     io.mspt = (60 / io.bpm) / io.tpb * 1000 -- milliseconds per tick
     io.tc = 0                              -- tick count (global counter, starts at 0)
     io.beat_count = 0
     io.tick_count = 0
     io.ch = 1
 
-    -- Checks if the current global tick count matches a rhythmic interval.
-    io.on = function(a, b)
-        a = a or 1
-        b = b or 1
-        return io.tc % ((io.tpb * a) // b) == 0
+    -- Uses floating point math to prevent drift when intervals don't divide evenly into whole ticks
+    io.on = function(interval)
+        interval = interval or 1
+        local ticks_per_interval = io.tpb * interval  -- e.g., 180 * (1/8) = 22.5
+        
+        -- Calculate how many complete intervals should have occurred by now
+        local expected_intervals = math.floor(io.tc / ticks_per_interval)
+        
+        -- Calculate the exact tick where this interval should start
+        local interval_start_tick = math.floor(expected_intervals * ticks_per_interval + 0.5)
+        
+        -- Check if we're exactly at an interval boundary
+        return io.tc == interval_start_tick
     end
 
     -- Calculate tick intervals, number of ticks in a rhythmic interval.
