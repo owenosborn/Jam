@@ -40,7 +40,7 @@ io.dur(1/4)   -- Quarter of a beat duration (sixteenth note)
 io.dur(3)     -- Three beats duration
 ```
 
-#### `io.note(note, velocity, duration, channel)`
+#### `io.playNote(note, velocity, duration, channel)`
 
 Play a MIDI note via OSC output.
 
@@ -49,7 +49,7 @@ Play a MIDI note via OSC output.
 - `duration` - Note duration in milliseconds
 - `channel` - MIDI channel (optional, defaults to io.ch)
 
-#### `io.cc(controller, value, channel)`
+#### `io.sendCC(controller, value, channel)`
 
 Send MIDI Control Change message.
 
