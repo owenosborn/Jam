@@ -82,8 +82,7 @@ function jam:tick(io)
     local beat_in_measure = io.beat_count % 4
     local pattern_pos = (math.floor(io.beat_count / 4) % 2) * 4 + beat_in_measure + 1
     pattern_pos = ((pattern_pos - 1) % 8) + 1
-   
-    self.section = 4
+    
     -- Play bass melody (Section 1 or 4)
     if self.section == 1 or self.section == 4 then
         local rhythm = self.rhythms.bass[pattern_pos]
