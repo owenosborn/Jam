@@ -27,8 +27,8 @@ return jam
 ```
 
 ### Timing Functions
-- `io.on(a, b)` - Returns true when current tick matches rhythmic interval (a beats / b divisions)
-- `io.dur(a, b)` - Returns tick duration for rhythmic interval 
+- `io.on(a, b)` - Returns true when current tick matches rhythmic interval, a is beat multiplier, b is offset)
+- `io.dur(a)` - Returns tick duration for rhythmic interval, a is beat multiplier
 
 ### Nestable Architecture
 Jams can load and coordinate other jams using the utils system, enabling complex musical arrangements from simple building blocks.
@@ -45,7 +45,7 @@ Jams can load and coordinate other jams using the utils system, enabling complex
 - **Progression**: Time-based chord sequences with parsing from strings like "D-7...G7...Cmaj7"
 
 ### Utility Modules
-Focused modules provide extended functionality:
+Focused modules provide extended functionality, For example:
 - **ChordPlayer**: Different chord articulation styles (block, roll, strum, random)
 - **Arpeggio**: Generate note sequences from chords with various patterns
 - **Pattern Utils**: Transpose, reverse, scale operations on note patterns
@@ -53,7 +53,7 @@ Focused modules provide extended functionality:
 
 ## IO Object
 The `io` parameter provides:
-- **Timing**: `tpb`, `bpm`, `tc` (global tick counter)
+- **Timing**: `tpb` ticks per beat, `bpm` beats per minute, `tc`, global tick counter
 - **Functions**: `on()`, `dur()` for rhythmic calculations
 - **Output**: `playNote()` for MIDI note generation
 - **MIDI**: Default channel (`ch`) and future CC support
