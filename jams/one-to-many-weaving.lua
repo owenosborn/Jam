@@ -10,10 +10,7 @@ local progression = require("lib/progression")
 function jam:init(io)
     -- Jazz-influenced progression with more harmonic movement
     self.prog = progression.Progression.new()
-    --self.prog:parse("A-7...D-7...G7...Cmaj7...F7...Bb7...Ebmaj7...G7...")
-    --self.prog:parse("A-7...D-7...G7...Cmaj7...F7...Bb7...Ebmaj7...G7...")
-    --self.prog:parse("A-7,9..D7.....G-7..C7.....F-7..Bb7.....Ebmaj7......")
-    self.prog:parse("D-9...E-9...")
+    self.prog:parse("A-7...D-7...G7...Cmaj7...F7...Bb7...Ebmaj7...G7...")
     
     -- Weaving pattern: which voices are active in each 8-beat section
     -- 1 = bass, 2 = mid, 3 = high
@@ -33,7 +30,7 @@ function jam:init(io)
     }
     
     self.section = 1
-    self.section_length = 4  -- beats per weaving section
+    self.section_length = 32  -- beats per weaving section
     self.beat_in_section = 0
     
     -- More sophisticated melody patterns
