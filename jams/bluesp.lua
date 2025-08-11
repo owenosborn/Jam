@@ -36,7 +36,7 @@ function jam:init(io)
         gate = 0.85,
         humanize = 0.06,
         rate = 1/2,           -- quarter notes
-    }):setStyle("walk", {walk_prob = 0.8})  -- try "pulse", "octave", "walk", or "sync"
+    }):setStyle("octave", {sync_prob = 0.65})  -- try "pulse", "octave", "walk", or "sync"
 
     -- Provide a peek at next chord root (optional, helps approach notes)
     self.bass:setNextRootFn(function()
