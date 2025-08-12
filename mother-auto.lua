@@ -17,23 +17,27 @@ local function initIO(tpb, osc_host, osc_port)
 
     -- Enhanced io.on() function with offset support
     -- Usage: io.on(interval, offset)
-    -- interval: beat divisor (1 = whole note, 1/4 = quarter note, etc.)
-    -- offset: beat offset from the start of the interval (optional, default 0)
+    -- interval: beat multiplier
+    -- offset: beat offset in beats
     io.on = function(interval, offset)
         interval = interval or 1
         offset = offset or 0
         
-        local ticks_per_interval = io.tpb * interval  -- e.g., 180 * (1/4) = 45
-        local offset_ticks = io.tpb * offset          -- e.g., 180 * (1/8) = 22.5
+        -- get local tickcount by subtracting offset
+        local tc = io.tc - math.floor(offset * io.tpb)
+        
+        if tc < 0 then return false end
+
+        local ticks_per_interval = io.tpb * interval  -- e.g., 180 * (1/8) = 22.5
         
         -- Calculate how many complete intervals should have occurred by now
-        local expected_intervals = math.floor((io.tc - offset_ticks) / ticks_per_interval)
+        local expected_intervals = math.floor(tc / ticks_per_interval)
         
-        -- Calculate the exact tick where this interval should start (with offset)
-        local interval_start_tick = math.floor(expected_intervals * ticks_per_interval + offset_ticks + 0.5)
+        -- Calculate the exact tick where this interval should start
+        local interval_start_tick = math.floor(expected_intervals * ticks_per_interval + 0.5)
         
         -- Check if we're exactly at an interval boundary
-        return io.tc == interval_start_tick and io.tc >= offset_ticks
+        return tc == interval_start_tick
     end
 
     -- Calculate tick intervals, number of ticks in a rhythmic interval.
