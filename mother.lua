@@ -69,7 +69,36 @@ local function initIO(tpb, osc_host, osc_port)
         }
         osc:send(note_message)
     end
-    
+
+    -- New beat-based playNote with named parameters
+    io.pn = function(note, params)
+        -- Handle both styles:
+        -- io.pn(60, {vel = 80, dur = 1/4, ch = 2})
+        -- io.pn(60, {vel = 80, dur = 1/4})  -- ch defaults to io.ch
+        -- io.pn(60, {dur = 1/4})           -- vel defaults to 80
+        -- io.pn(60)                        -- all defaults
+
+        params = params or {}
+
+        local velocity = params.vel or params.velocity or 80
+        local duration_beats = params.dur or params.duration or 1/4
+        local channel = params.ch or params.channel or io.ch
+
+        -- Convert duration from beats to milliseconds
+        local duration_ms = math.floor(duration_beats * (60000 / io.bpm))
+
+        -- Create and send note message (same as original playNote)
+        local note_message = osc.new_message {
+            address = '/note',
+            types = 'iiii',
+            math.floor(note),
+            math.floor(velocity),
+            duration_ms,
+            math.floor(channel)
+        }
+        osc:send(note_message)
+    end
+
     -- Additional OSC functions you could add
     io.sendCC = function(controller, value, channel)
         local ch = channel or 1
