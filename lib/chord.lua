@@ -105,6 +105,10 @@ local extension = {
                 table.insert(pitches, 10) -- add dom7
                 pitches[3] = 6 -- flatten the 5th
               end,
+    ["sus4"] = function(pitches, chord) 
+                pitches[2] = 5 -- flatten the 5th
+              end,
+
 }
 
 -- Construct chord from parsed components

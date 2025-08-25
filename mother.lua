@@ -8,7 +8,7 @@ local function initIO(tpb, osc_host, osc_port)
 
     local io = {}
     io.tpb = tpb or 180                    -- ticks per beat (user configurable)
-    io.bpm = 100                        -- beats per minute 
+    io.bpm = 150                        -- beats per minute 
     io.mspt = (60 / io.bpm) / io.tpb * 1000 -- milliseconds per tick
     io.tc = 0                              -- tick count (global counter, starts at 0)
     io.beat_count = 0

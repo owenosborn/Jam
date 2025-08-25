@@ -8,7 +8,6 @@ function Progression.new()
     local self = setmetatable({}, Progression)
     self.chords = {}            -- array of Chord objects, each chord object gets time attribute added. time is in beats
     self.length_beats = 0       -- total length in beats
-    self.length_ticks = 0       -- total length in ticks, calculated
     self.playhead = 0           -- current position in ticks
     self.index = 1              -- current chord index
     self.chord_changed = true   -- flag for new chord detection
@@ -27,6 +26,22 @@ end
 function Progression:current()
     if #self.chords == 0 then return nil end
     return self.chords[self.index]
+end
+
+-- Scale the entire progression by a factor
+-- factor > 1 makes it longer, factor < 1 makes it shorter
+function Progression:scale(factor)
+    factor = factor or 1
+    
+    -- Scale the total length
+    self.length_beats = self.length_beats * factor
+    
+    -- Scale each chord's start time
+    for _, chord in ipairs(self.chords) do
+        chord.time = chord.time * factor
+    end
+    
+    return self  -- Return self for chaining
 end
 
 -- Advance the playhead
@@ -147,8 +162,8 @@ function Progression:print(print_callback)
     
     print_callback(separator)
     print_callback(string.format(
-        "Length: %d beats (%d ticks), Playhead: %d ticks, Index: %d",
-        self.length_beats, self.length_ticks, self.playhead, self.index
+        "Length: %f beats, Playhead: %d ticks, Index: %d",
+        self.length_beats, self.playhead, self.index
     ))
 end
 
