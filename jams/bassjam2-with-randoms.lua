@@ -19,7 +19,7 @@ function jam:tick(io)
       io.pn(chord:note(1,3), {dur=1/16, vel=math.random(1, 2) * 40} ) 
   end      
 
-  if io.on(1/8) and math.random(1,100) > 50 then 
+  if io.on(1/8) and math.random(1,100) > 30 then 
       io.pn(chord:note(math.random(1, 4), math.random(4, 8)), {dur=1/16, vel=20} ) 
   end      
 
