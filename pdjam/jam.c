@@ -9,12 +9,11 @@ static t_class *jam_class;
 typedef struct _jam {
     t_object x_obj;
     lua_State *L;
-    t_outlet *note_out;    // outlet for note messages
+    t_outlet *msg_out;     // left outlet: musical messages
+    t_outlet *info_out;    // right outlet: info/debug
     t_float tpb;           // ticks per beat
     t_float bpm;           // beats per minute
     long tc;               // tick counter
-    long beat_count;
-    long tick_count;
 } t_jam;
 
 // Lua C function to implement io.playNote()
@@ -30,13 +29,71 @@ static int l_playNote(lua_State *L) {
     int duration = luaL_checkinteger(L, 3);
     int channel = luaL_optinteger(L, 4, 1);
     
-    // Create and send PD message: [note vel dur ch(
+    // Create and send PD message: [note 60 80 500 1(
+    t_atom argv[5];
+    SETSYMBOL(&argv[0], gensym("note"));
+    SETFLOAT(&argv[1], (t_float)note);
+    SETFLOAT(&argv[2], (t_float)velocity);
+    SETFLOAT(&argv[3], (t_float)duration);
+    SETFLOAT(&argv[4], (t_float)channel);
+    outlet_list(x->msg_out, &s_list, 5, argv);
+    
+    return 0;
+}
+
+// Lua C function to implement io.sendCC()
+static int l_sendCC(lua_State *L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    t_jam *x = (t_jam *)lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    
+    int controller = luaL_checkinteger(L, 1);
+    int value = luaL_checkinteger(L, 2);
+    int channel = luaL_optinteger(L, 3, 1);
+    
+    // Create and send PD message: [cc 7 64 1(
     t_atom argv[4];
-    SETFLOAT(&argv[0], (t_float)note);
-    SETFLOAT(&argv[1], (t_float)velocity);
-    SETFLOAT(&argv[2], (t_float)duration);
+    SETSYMBOL(&argv[0], gensym("cc"));
+    SETFLOAT(&argv[1], (t_float)controller);
+    SETFLOAT(&argv[2], (t_float)value);
     SETFLOAT(&argv[3], (t_float)channel);
-    outlet_list(x->note_out, &s_list, 4, argv);
+    outlet_list(x->msg_out, &s_list, 4, argv);
+    
+    return 0;
+}
+
+// Lua C function to redirect print() to info outlet
+static int l_print(lua_State *L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    t_jam *x = (t_jam *)lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    
+    // Build string from all arguments
+    int n = lua_gettop(L);
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
+    
+    for (int i = 1; i <= n; i++) {
+        if (i > 1) luaL_addstring(&b, "\t");
+        
+        if (lua_isstring(L, i)) {
+            luaL_addvalue(&b);
+        } else {
+            // Convert to string
+            lua_pushvalue(L, i);
+            const char *s = lua_tostring(L, -1);
+            if (s) {
+                luaL_addstring(&b, s);
+            }
+            lua_pop(L, 1);
+        }
+    }
+    
+    luaL_pushresult(&b);
+    const char *msg = lua_tostring(L, -1);
+    
+    // Send to info outlet
+    outlet_symbol(x->info_out, gensym(msg));
     
     return 0;
 }
@@ -95,18 +152,15 @@ static void init_io(t_jam *x) {
     lua_pushinteger(L, x->tc);
     lua_setfield(L, -2, "tc");
     
-    lua_pushinteger(L, x->beat_count);
-    lua_setfield(L, -2, "beat_count");
-    
-    lua_pushinteger(L, x->tick_count);
-    lua_setfield(L, -2, "tick_count");
-    
     lua_pushinteger(L, 1);
     lua_setfield(L, -2, "ch");
     
     // Register C functions
     lua_pushcfunction(L, l_playNote);
     lua_setfield(L, -2, "playNote");
+    
+    lua_pushcfunction(L, l_sendCC);
+    lua_setfield(L, -2, "sendCC");
     
     lua_pushcfunction(L, l_on);
     lua_setfield(L, -2, "on");
@@ -116,6 +170,10 @@ static void init_io(t_jam *x) {
     
     // Store io as global
     lua_setglobal(L, "io");
+    
+    // Override global print to use our outlet
+    lua_pushcfunction(L, l_print);
+    lua_setglobal(L, "print");
 }
 
 // Update io values before each tick
@@ -126,12 +184,6 @@ static void update_io(t_jam *x) {
     if (lua_istable(L, -1)) {
         lua_pushinteger(L, x->tc);
         lua_setfield(L, -2, "tc");
-        
-        lua_pushinteger(L, x->beat_count);
-        lua_setfield(L, -2, "beat_count");
-        
-        lua_pushinteger(L, x->tick_count);
-        lua_setfield(L, -2, "tick_count");
     }
     lua_pop(L, 1);
 }
@@ -158,7 +210,7 @@ static int load_jam(t_jam *x, t_symbol *s) {
     // Store the jam table as global "jam"
     lua_setglobal(L, "jam");
     
-    // Initialize the io table
+    // Initialize the io table (this also overrides print)
     init_io(x);
     
     // Call jam:init(io)
@@ -175,6 +227,8 @@ static int load_jam(t_jam *x, t_symbol *s) {
     
     lua_pop(L, 1);  // pop jam table
     
+    // Send load confirmation to info outlet
+    outlet_symbol(x->info_out, gensym("loaded"));
     post("jam: loaded %s", s->s_name);
     return 0;
 }
@@ -204,6 +258,11 @@ static void jam_bang(t_jam *x) {
     
     if (lua_pcall(L, 2, 0, 0) != LUA_OK) {
         pd_error(x, "jam: error in tick(): %s", lua_tostring(L, -1));
+        // Also send error to info outlet
+        t_atom argv[2];
+        SETSYMBOL(&argv[0], gensym("error"));
+        SETSYMBOL(&argv[1], gensym(lua_tostring(L, -1)));
+        outlet_list(x->info_out, &s_list, 2, argv);
         lua_pop(L, 1);
     }
     
@@ -211,8 +270,49 @@ static void jam_bang(t_jam *x) {
     
     // Increment counters
     x->tc++;
-    x->tick_count = x->tc % (long)x->tpb;
-    x->beat_count = x->tc / (long)x->tpb;
+}
+
+// Reset tick counter
+static void jam_reset(t_jam *x) {
+    x->tc = 0;
+    outlet_symbol(x->info_out, gensym("reset"));
+    post("jam: reset counters");
+}
+
+// Set BPM
+static void jam_bpm(t_jam *x, t_floatarg f) {
+    if (f > 0) {
+        x->bpm = f;
+        
+        // Update io.bpm in Lua
+        lua_State *L = x->L;
+        lua_getglobal(L, "io");
+        if (lua_istable(L, -1)) {
+            lua_pushnumber(L, x->bpm);
+            lua_setfield(L, -2, "bpm");
+        }
+        lua_pop(L, 1);
+        
+        post("jam: bpm set to %.1f", x->bpm);
+    }
+}
+
+// Set TPB
+static void jam_tpb(t_jam *x, t_floatarg f) {
+    if (f > 0) {
+        x->tpb = f;
+        
+        // Update io.tpb in Lua
+        lua_State *L = x->L;
+        lua_getglobal(L, "io");
+        if (lua_istable(L, -1)) {
+            lua_pushnumber(L, x->tpb);
+            lua_setfield(L, -2, "tpb");
+        }
+        lua_pop(L, 1);
+        
+        post("jam: tpb set to %.0f", x->tpb);
+    }
 }
 
 // Constructor
@@ -223,8 +323,6 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
     x->tpb = 180.0;
     x->bpm = 100.0;
     x->tc = 0;
-    x->beat_count = 0;
-    x->tick_count = 0;
     
     // Parse arguments (optional: tpb, bpm)
     if (argc > 0 && argv[0].a_type == A_FLOAT)
@@ -232,8 +330,9 @@ static void *jam_new(t_symbol *s, int argc, t_atom *argv) {
     if (argc > 1 && argv[1].a_type == A_FLOAT)
         x->bpm = atom_getfloat(&argv[1]);
     
-    // Create outlet
-    x->note_out = outlet_new(&x->x_obj, &s_list);
+    // Create outlets (left to right)
+    x->msg_out = outlet_new(&x->x_obj, &s_list);   // musical messages
+    x->info_out = outlet_new(&x->x_obj, &s_symbol); // info/debug
     
     // Initialize Lua
     x->L = luaL_newstate();
@@ -273,4 +372,10 @@ void jam_setup(void) {
     class_addbang(jam_class, jam_bang);
     class_addmethod(jam_class, (t_method)load_jam, 
                     gensym("load"), A_SYMBOL, 0);
+    class_addmethod(jam_class, (t_method)jam_reset, 
+                    gensym("reset"), 0);
+    class_addmethod(jam_class, (t_method)jam_bpm, 
+                    gensym("bpm"), A_FLOAT, 0);
+    class_addmethod(jam_class, (t_method)jam_tpb, 
+                    gensym("tpb"), A_FLOAT, 0);
 }

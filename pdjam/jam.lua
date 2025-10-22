@@ -3,6 +3,7 @@ local jam = {}
 function jam:init(io)
     self.interval = io.tpb // 2  -- Start with eighth notes
     self.last_note_time = 0
+    print("Asdf")
 end
 
 function jam:tick(io)
