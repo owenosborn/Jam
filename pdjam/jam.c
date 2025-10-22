@@ -138,9 +138,6 @@ static void init_io(t_jam *x) {
     lua_pushinteger(L, x->tc);
     lua_setfield(L, -2, "tc");
     
-    lua_pushinteger(L, 1);
-    lua_setfield(L, -2, "ch");
-    
     // Register C functions
     lua_pushcfunction(L, l_playNote);
     lua_setfield(L, -2, "playNote");
