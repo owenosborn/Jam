@@ -121,20 +121,6 @@ static int l_on(lua_State *L) {
     return 1;
 }
 
-// Lua C function to implement io.dur()
-static int l_dur(lua_State *L) {
-    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
-    t_jam *x = (t_jam *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    
-    double a = luaL_optnumber(L, 1, 1.0);
-    double b = luaL_optnumber(L, 2, 1.0);
-    
-    long result = (long)((x->tpb * a) / b);
-    lua_pushinteger(L, result);
-    return 1;
-}
-
 // Initialize the io table in Lua
 static void init_io(t_jam *x) {
     lua_State *L = x->L;
@@ -164,9 +150,6 @@ static void init_io(t_jam *x) {
     
     lua_pushcfunction(L, l_on);
     lua_setfield(L, -2, "on");
-    
-    lua_pushcfunction(L, l_dur);
-    lua_setfield(L, -2, "dur");
     
     // Store io as global
     lua_setglobal(L, "io");
