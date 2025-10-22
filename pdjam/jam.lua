@@ -3,7 +3,7 @@ local jam = {}
 function jam:init(io)
     self.interval = io.tpb // 2  -- Start with eighth notes
     self.last_note_time = 0
-    print("Asdf")
+    self.count = 0
 end
 
 function jam:tick(io)
@@ -19,6 +19,18 @@ function jam:tick(io)
         if self.interval <= 5 then
             self.interval = io.tpb // 2  -- Back to eighth notes
         end
+    end
+end
+
+function jam:onMessage(io, ...)
+    local args = {...}
+    local cmd = args[1]
+   
+    if cmd == "note" then
+        local note = args[2]
+        local velocity = args[3]
+        self.count = self.count + 1
+        io.playNote(note + self.count, velocity, 100)
     end
 end
 

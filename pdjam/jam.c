@@ -121,6 +121,20 @@ static int l_on(lua_State *L) {
     return 1;
 }
 
+// Lua C function to implement io.dur()
+static int l_dur(lua_State *L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    t_jam *x = (t_jam *)lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    
+    double a = luaL_optnumber(L, 1, 1.0);
+    double b = luaL_optnumber(L, 2, 1.0);
+    
+    long result = (long)((x->tpb * a) / b);
+    lua_pushinteger(L, result);
+    return 1;
+}
+
 // Initialize the io table in Lua
 static void init_io(t_jam *x) {
     lua_State *L = x->L;
@@ -138,6 +152,9 @@ static void init_io(t_jam *x) {
     lua_pushinteger(L, x->tc);
     lua_setfield(L, -2, "tc");
     
+    lua_pushinteger(L, 1);
+    lua_setfield(L, -2, "ch");
+    
     // Register C functions
     lua_pushcfunction(L, l_playNote);
     lua_setfield(L, -2, "playNote");
@@ -147,6 +164,9 @@ static void init_io(t_jam *x) {
     
     lua_pushcfunction(L, l_on);
     lua_setfield(L, -2, "on");
+    
+    lua_pushcfunction(L, l_dur);
+    lua_setfield(L, -2, "dur");
     
     // Store io as global
     lua_setglobal(L, "io");
@@ -252,6 +272,53 @@ static void jam_bang(t_jam *x) {
     x->tc++;
 }
 
+// Handle list messages - pass to jam:onMessage(io, ...)
+static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
+    lua_State *L = x->L;
+
+    if (argc < 1) return;
+
+    // Update io values first (like we do in jam_bang)
+    update_io(x);
+
+    // Get jam table
+    lua_getglobal(L, "jam");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+
+    // Get onMessage method
+    lua_getfield(L, -1, "onMessage");
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 2);  // pop function and jam table
+        return;
+    }
+
+    // Push self (jam table)
+    lua_pushvalue(L, -2);
+
+    // Push io table (like tick does)
+    lua_getglobal(L, "io");
+
+    // Push all arguments
+    for (int i = 0; i < argc; i++) {
+        if (argv[i].a_type == A_FLOAT) {
+            lua_pushnumber(L, atom_getfloat(&argv[i]));
+        } else if (argv[i].a_type == A_SYMBOL) {
+            lua_pushstring(L, atom_getsymbol(&argv[i])->s_name);
+        }
+    }
+
+    // Call jam:onMessage(io, ...)
+    if (lua_pcall(L, argc + 2, 0, 0) != LUA_OK) {
+        pd_error(x, "jam: error in onMessage(): %s", lua_tostring(L, -1));
+        lua_pop(L, 1);
+    }
+
+    lua_pop(L, 1);  // pop jam table
+}
+
 // Reset tick counter
 static void jam_reset(t_jam *x) {
     x->tc = 0;
@@ -350,6 +417,7 @@ void jam_setup(void) {
         A_GIMME, 0);
     
     class_addbang(jam_class, jam_bang);
+    class_addlist(jam_class, jam_list);  // Handle list messages
     class_addmethod(jam_class, (t_method)load_jam, 
                     gensym("load"), A_SYMBOL, 0);
     class_addmethod(jam_class, (t_method)jam_reset, 

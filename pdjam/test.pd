@@ -1,4 +1,4 @@
-#N canvas 500 265 656 488 12;
+#N canvas 260 273 656 488 12;
 #X obj 97 130 jam 180 100, f 16;
 #X obj 43 60 metro 5.55;
 #X obj 43 15 tgl 19 0 empty empty empty 0 -10 0 12 #fcfcfc #000000 #000000 0 1;
@@ -12,6 +12,7 @@
 #X obj 96 185 route note;
 #X obj 96 209 print;
 #X obj 217 179 print LINFO;
+#X msg 221 19 list note 51 103;
 #X connect 0 0 9 0;
 #X connect 0 1 12 0;
 #X connect 1 0 0 0;
@@ -26,3 +27,4 @@
 #X connect 8 0 0 0;
 #X connect 9 0 10 0;
 #X connect 10 0 11 0;
+#X connect 13 0 0 0;
