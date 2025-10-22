@@ -18,7 +18,7 @@ The `io` object provides timing information and functions to generate musical ou
 - **`io.tpb`** - Ticks per beat (default: 180, configurable)
 - **`io.bpm`** - Beats per minute (default: 100)
 - **`io.tc`** - Global tick counter (starts at 0, increments each tick)
-- **`io.ch`** - Default MIDI channel (default: 1)
+- **`io.ch`** - MIDI output channel (default: 1)
 
 ### Core Functions
 
@@ -35,27 +35,26 @@ io.on(1, 1/2)  -- Every beat, offset by half a beat
 - **`interval`** - Number of beats between triggers (default: 1)
 - **`offset`** - Beat offset for rhythmic displacement (default: 0)
 
-#### `io.play_note(note, velocity, duration, channel)`
+#### `io.play_note(note, velocity, duration)`
 Send a note to Pure Data's left outlet.
+Duration is in beats, and is optional.  If duration is provided, the note will be output as makenote with duration converted to ms.
 
 ```lua
-io.play_note(60, 100, 500)      -- C4, velocity 100, 500ms duration
-io.play_note(67, 80, 250, 2)    -- G4, velocity 80, 250ms, channel 2
+io.play_note(60, 100, 1)      -- C4, velocity 100, 1 beat duration
 ```
 
 - **`note`** - MIDI note number (0-127)
 - **`velocity`** - Note velocity (0-127)
-- **`duration`** - Duration in milliseconds
-- **`channel`** - MIDI channel (optional, defaults to `io.ch`)
+- **`duration`** - (optional) Duration in beats
 
-Output format: `note [note] [velocity] [duration] [channel]`
+Output format no duration: `note [note] [velocity] [channel]`
+Output format with duration: `makenote [note] [velocity] [duration] [channel]`
 
-#### `io.send_cc(controller, value, channel)`
+#### `io.send_cc(controller, value)`
 Send a MIDI CC message.
 
 ```lua
-io.send_cc(7, 64)      -- Volume to 64 on default channel
-io.send_cc(1, 127, 3)  -- Mod wheel to 127 on channel 3
+io.send_cc(7, 64)      -- Volume to 64 on output channel
 ```
 
 Output format: `cc [controller] [value] [channel]`

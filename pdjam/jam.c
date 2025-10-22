@@ -23,20 +23,39 @@ static int l_play_note(lua_State *L) {
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
     
-    // Get arguments: note, velocity, duration (optional), channel (optional)
+    // Get arguments: note, velocity, duration (optional, in beats)
     int note = luaL_checkinteger(L, 1);
     int velocity = luaL_checkinteger(L, 2);
-    int duration = luaL_optinteger(L, 3, 0);  // 0 = no duration (immediate MIDI)
-    int channel = luaL_optinteger(L, 4, 1);
+    double duration_beats = luaL_optnumber(L, 3, 0.0);
     
-    // Create and send PD message: [note 60 80 500 1(
-    t_atom argv[5];
-    SETSYMBOL(&argv[0], gensym("note"));
-    SETFLOAT(&argv[1], (t_float)note);
-    SETFLOAT(&argv[2], (t_float)velocity);
-    SETFLOAT(&argv[3], (t_float)duration);
-    SETFLOAT(&argv[4], (t_float)channel);
-    outlet_list(x->msg_out, &s_list, 5, argv);
+    // Get channel from io.ch
+    lua_getglobal(L, "io");
+    lua_getfield(L, -1, "ch");
+    int channel = (int)lua_tonumber(L, -1);
+    lua_pop(L, 2);  // pop channel and io table
+    
+    if (duration_beats > 0) {
+        // Calculate duration in milliseconds from beats
+        // duration_ms = (duration_beats / bpm) * 60000
+        int duration_ms = (int)((duration_beats / x->bpm) * 60000.0);
+        
+        // Output as makenote format: [makenote 60 100 500 1(
+        t_atom argv[5];
+        SETSYMBOL(&argv[0], gensym("makenote"));
+        SETFLOAT(&argv[1], (t_float)note);
+        SETFLOAT(&argv[2], (t_float)velocity);
+        SETFLOAT(&argv[3], (t_float)duration_ms);
+        SETFLOAT(&argv[4], (t_float)channel);
+        outlet_list(x->msg_out, &s_list, 5, argv);
+    } else {
+        // Output as raw note (no duration): [note 60 100 1(
+        t_atom argv[3];
+        SETSYMBOL(&argv[0], gensym("note"));
+        SETFLOAT(&argv[1], (t_float)note);
+        SETFLOAT(&argv[2], (t_float)velocity);
+        SETFLOAT(&argv[3], (t_float)channel);
+        outlet_list(x->msg_out, &s_list, 4, argv);
+    }
     
     return 0;
 }
@@ -49,7 +68,12 @@ static int l_send_cc(lua_State *L) {
     
     int controller = luaL_checkinteger(L, 1);
     int value = luaL_checkinteger(L, 2);
-    int channel = luaL_optinteger(L, 3, 1);
+    
+    // Get channel from io.ch
+    lua_getglobal(L, "io");
+    lua_getfield(L, -1, "ch");
+    int channel = (int)lua_tonumber(L, -1);
+    lua_pop(L, 2);
     
     // Create and send PD message: [cc 7 64 1(
     t_atom argv[4];
@@ -141,7 +165,7 @@ static void init_io(t_jam *x) {
     lua_pushinteger(L, 1);
     lua_setfield(L, -2, "ch");
     
-    // Register C functions with new names
+    // Register C functions
     lua_pushcfunction(L, l_play_note);
     lua_setfield(L, -2, "play_note");
     
