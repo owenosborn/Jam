@@ -138,10 +138,10 @@ static int l_on(lua_State *L) {
     }
     
     double ticks_per_interval = x->tpb * interval;
-    long expected_intervals = (long)(tc / ticks_per_interval);
-    long interval_start_tick = (long)(expected_intervals * ticks_per_interval + 0.5);
-    
+    long intervals_passed = (long)(tc / ticks_per_interval);
+    long interval_start_tick = (long)(ticks_per_interval * intervals_passed) + 1;
     lua_pushboolean(L, tc == interval_start_tick);
+
     return 1;
 }
 
