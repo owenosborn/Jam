@@ -16,17 +16,17 @@ typedef struct _jam {
     long tc;               // tick counter
 } t_jam;
 
-// Lua C function to implement io.playNote()
-static int l_playNote(lua_State *L) {
+// Lua C function to implement io.play_note()
+static int l_play_note(lua_State *L) {
     // Get the jam object from registry
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
     
-    // Get arguments: note, velocity, duration, channel
+    // Get arguments: note, velocity, duration (optional), channel (optional)
     int note = luaL_checkinteger(L, 1);
     int velocity = luaL_checkinteger(L, 2);
-    int duration = luaL_checkinteger(L, 3);
+    int duration = luaL_optinteger(L, 3, 0);  // 0 = no duration (immediate MIDI)
     int channel = luaL_optinteger(L, 4, 1);
     
     // Create and send PD message: [note 60 80 500 1(
@@ -41,8 +41,8 @@ static int l_playNote(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement io.sendCC()
-static int l_sendCC(lua_State *L) {
+// Lua C function to implement io.send_cc()
+static int l_send_cc(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
@@ -121,20 +121,6 @@ static int l_on(lua_State *L) {
     return 1;
 }
 
-// Lua C function to implement io.dur()
-static int l_dur(lua_State *L) {
-    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
-    t_jam *x = (t_jam *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    
-    double a = luaL_optnumber(L, 1, 1.0);
-    double b = luaL_optnumber(L, 2, 1.0);
-    
-    long result = (long)((x->tpb * a) / b);
-    lua_pushinteger(L, result);
-    return 1;
-}
-
 // Initialize the io table in Lua
 static void init_io(t_jam *x) {
     lua_State *L = x->L;
@@ -155,18 +141,15 @@ static void init_io(t_jam *x) {
     lua_pushinteger(L, 1);
     lua_setfield(L, -2, "ch");
     
-    // Register C functions
-    lua_pushcfunction(L, l_playNote);
-    lua_setfield(L, -2, "playNote");
+    // Register C functions with new names
+    lua_pushcfunction(L, l_play_note);
+    lua_setfield(L, -2, "play_note");
     
-    lua_pushcfunction(L, l_sendCC);
-    lua_setfield(L, -2, "sendCC");
+    lua_pushcfunction(L, l_send_cc);
+    lua_setfield(L, -2, "send_cc");
     
     lua_pushcfunction(L, l_on);
     lua_setfield(L, -2, "on");
-    
-    lua_pushcfunction(L, l_dur);
-    lua_setfield(L, -2, "dur");
     
     // Store io as global
     lua_setglobal(L, "io");
@@ -272,50 +255,70 @@ static void jam_bang(t_jam *x) {
     x->tc++;
 }
 
-// Handle list messages - pass to jam:onMessage(io, ...)
+// Handle list messages - route to specific handlers or fallback
 static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
     lua_State *L = x->L;
-
+    
     if (argc < 1) return;
-
-    // Update io values first (like we do in jam_bang)
+    
+    // Update io values first
     update_io(x);
-
+    
     // Get jam table
     lua_getglobal(L, "jam");
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
         return;
     }
-
-    // Get onMessage method
-    lua_getfield(L, -1, "onMessage");
-    if (!lua_isfunction(L, -1)) {
-        lua_pop(L, 2);  // pop function and jam table
-        return;
+    
+    // Get the command (first argument should be a symbol)
+    const char *cmd = NULL;
+    if (argv[0].a_type == A_SYMBOL) {
+        cmd = atom_getsymbol(&argv[0])->s_name;
+    } else {
+        lua_pop(L, 1);
+        return;  // First arg must be a symbol
     }
-
+    
+    // Try to find specific handler (on_note, on_cc, etc.)
+    char handler_name[64];
+    snprintf(handler_name, sizeof(handler_name), "on_%s", cmd);
+    
+    lua_getfield(L, -1, handler_name);
+    
+    // If no specific handler, try generic on_message
+    if (!lua_isfunction(L, -1)) {
+        lua_pop(L, 1);
+        lua_getfield(L, -1, "on_message");
+        
+        // If still no handler, just return
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 2);
+            return;
+        }
+    }
+    
     // Push self (jam table)
     lua_pushvalue(L, -2);
-
-    // Push io table (like tick does)
+    
+    // Push io table
     lua_getglobal(L, "io");
-
-    // Push all arguments
-    for (int i = 0; i < argc; i++) {
+    
+    // Push remaining arguments (skip the command name for specific handlers)
+    for (int i = 1; i < argc; i++) {
         if (argv[i].a_type == A_FLOAT) {
             lua_pushnumber(L, atom_getfloat(&argv[i]));
         } else if (argv[i].a_type == A_SYMBOL) {
             lua_pushstring(L, atom_getsymbol(&argv[i])->s_name);
         }
     }
-
-    // Call jam:onMessage(io, ...)
-    if (lua_pcall(L, argc + 2, 0, 0) != LUA_OK) {
-        pd_error(x, "jam: error in onMessage(): %s", lua_tostring(L, -1));
+    
+    // Call jam:on_XXX(io, ...) or jam:on_message(io, ...)
+    if (lua_pcall(L, argc + 1, 0, 0) != LUA_OK) {
+        pd_error(x, "jam: error in %s: %s", handler_name, lua_tostring(L, -1));
         lua_pop(L, 1);
     }
-
+    
     lua_pop(L, 1);  // pop jam table
 }
 
