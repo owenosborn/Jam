@@ -198,7 +198,31 @@ static void update_io(t_jam *x) {
 // Load and initialize a jam file
 static int load_jam(t_jam *x, t_symbol *s) {
     lua_State *L = x->L;
-    
+   
+    // Find path of script and update package path
+    const char *filepath = s->s_name;
+    char dirpath[MAXPDSTRING];
+    strncpy(dirpath, filepath, MAXPDSTRING);
+    char *last_slash = strrchr(dirpath, '/');
+    if (last_slash) {
+        *last_slash = '\0';  // Truncate to directory
+        
+        // Update package.path to include the script's directory
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "path");
+        const char *current_path = lua_tostring(L, -1);
+        
+        char new_path[MAXPDSTRING * 2];
+        snprintf(new_path, sizeof(new_path), 
+                 "%s/?.lua;%s/lib/?.lua;%s", 
+                 dirpath, dirpath, current_path);
+        
+        lua_pop(L, 1);  // pop old path
+        lua_pushstring(L, new_path);
+        lua_setfield(L, -2, "path");
+        lua_pop(L, 1);  // pop package table
+    }
+
     // Load the jam file
     if (luaL_dofile(L, s->s_name) != LUA_OK) {
         pd_error(x, "jam: error loading %s: %s", 

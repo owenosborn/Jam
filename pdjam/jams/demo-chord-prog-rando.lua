@@ -2,15 +2,13 @@
 local jam = {}
 
 local progression = require("lib/progression")
-local chord = require("lib/chord")
 
 function jam:init(io)
     
     -- Create a ii-V-I-VI progression using parse string
     self.prog = progression.Progression.new()
     self.prog:parse("D-7.E-9.G7...Cmaj7...A7...")
-    self.chord = progression.Progression.new()
-    self.chord:parse("D-7")
+    
     -- Print the progression
     self.prog:print()
     
