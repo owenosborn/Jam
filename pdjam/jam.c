@@ -86,13 +86,8 @@ static int l_send_cc(lua_State *L) {
     return 0;
 }
 
-// Lua C function to redirect print() to info outlet
+// Lua C function to redirect print() to Pd console
 static int l_print(lua_State *L) {
-    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
-    t_jam *x = (t_jam *)lua_touserdata(L, -1);
-    lua_pop(L, 1);
-    
-    // Build string from all arguments
     int n = lua_gettop(L);
     luaL_Buffer b;
     luaL_buffinit(L, &b);
@@ -100,24 +95,16 @@ static int l_print(lua_State *L) {
     for (int i = 1; i <= n; i++) {
         if (i > 1) luaL_addstring(&b, "\t");
         
-        if (lua_isstring(L, i)) {
-            luaL_addvalue(&b);
-        } else {
-            // Convert to string
-            lua_pushvalue(L, i);
-            const char *s = lua_tostring(L, -1);
-            if (s) {
-                luaL_addstring(&b, s);
-            }
-            lua_pop(L, 1);
-        }
+        const char *s = luaL_tolstring(L, i, NULL);
+        luaL_addstring(&b, s);
+        lua_pop(L, 1);  // pop the string created by luaL_tolstring
     }
     
     luaL_pushresult(&b);
     const char *msg = lua_tostring(L, -1);
     
-    // Send to info outlet
-    outlet_symbol(x->info_out, gensym(msg));
+    // Send to Pd console
+    post("jam: %s", msg);
     
     return 0;
 }

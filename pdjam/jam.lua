@@ -13,6 +13,7 @@ function jam:init(io)
     self.chord:parse("D-7")
     -- Print the progression
     self.prog:print()
+    self.count = 0 
     
 end
 
@@ -37,8 +38,10 @@ function jam:tick(io)
     
     -- Add melody notes occasionally, random octave chord tones
     if io.on(1/4) and math.random() < 0.8 then  -- 30% chance every beat
-        local melody_note = chord_now:note(math.random(1, #chord_now.pitches), math.random(3,6))  
-        io.play_note(melody_note, 30, 1/5)
+        --local melody_note = chord_now:note(math.random(1, #chord_now.pitches), math.random(3,6))  
+        local melody_note = chord_now:note(self.count % #chord_now.pitches, 5)
+        self.count  = self.count + 1
+        io.play_note(melody_note, 60, 1/5)
     end
 end
 
