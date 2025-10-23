@@ -28,7 +28,7 @@ function jam:tick(io)
     
     -- play chord tones at different intervals
     -- roots on octaves at eighth notes
-    if io.on(1/2) then  -- every half note
+    if io.on(1/4) and math.random() < .5 then  -- every half note
         local oct = 4
         if io.on(1) then oct = 3 end
         local bass_note = chord_now:note(1, oct)  -- root in octave 3
@@ -37,7 +37,7 @@ function jam:tick(io)
     
     -- Add melody notes occasionally, random octave chord tones
     if io.on(1/4) and math.random() < 0.8 then  -- 30% chance every beat
-        local melody_note = chord_now:note(math.random(1, #chord_now.pitches), math.random(3,6)) + 12
+        local melody_note = chord_now:note(math.random(1, #chord_now.pitches), math.random(3,6))  
         io.play_note(melody_note, 30, 1/5)
     end
 end

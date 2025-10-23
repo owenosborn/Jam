@@ -49,7 +49,7 @@ static int l_play_note(lua_State *L) {
         outlet_list(x->msg_out, &s_list, 5, argv);
     } else {
         // Output as raw note (no duration): [note 60 100 1(
-        t_atom argv[3];
+        t_atom argv[4];
         SETSYMBOL(&argv[0], gensym("note"));
         SETFLOAT(&argv[1], (t_float)note);
         SETFLOAT(&argv[2], (t_float)velocity);
@@ -212,7 +212,7 @@ static int load_jam(t_jam *x, t_symbol *s) {
         lua_getfield(L, -1, "path");
         const char *current_path = lua_tostring(L, -1);
         
-        char new_path[MAXPDSTRING * 2];
+        char new_path[MAXPDSTRING * 3];
         snprintf(new_path, sizeof(new_path), 
                  "%s/?.lua;%s/lib/?.lua;%s", 
                  dirpath, dirpath, current_path);
