@@ -16,8 +16,8 @@ typedef struct _jam {
     long tc;               // tick counter
 } t_jam;
 
-// Lua C function to implement io.play_note()
-static int l_play_note(lua_State *L) {
+// Lua C function to implement io.noteout()
+static int l_noteout(lua_State *L) {
     // Get the jam object from registry
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
@@ -60,8 +60,8 @@ static int l_play_note(lua_State *L) {
     return 0;
 }
 
-// Lua C function to implement io.send_cc()
-static int l_send_cc(lua_State *L) {
+// Lua C function to implement io.cltout()
+static int l_cltout(lua_State *L) {
     lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
     t_jam *x = (t_jam *)lua_touserdata(L, -1);
     lua_pop(L, 1);
@@ -75,13 +75,41 @@ static int l_send_cc(lua_State *L) {
     int channel = (int)lua_tonumber(L, -1);
     lua_pop(L, 2);
     
-    // Create and send PD message: [cc 7 64 1(
+    // Create and send PD message: [ctl 7 64 1(
     t_atom argv[4];
-    SETSYMBOL(&argv[0], gensym("cc"));
+    SETSYMBOL(&argv[0], gensym("ctl"));
     SETFLOAT(&argv[1], (t_float)controller);
     SETFLOAT(&argv[2], (t_float)value);
     SETFLOAT(&argv[3], (t_float)channel);
     outlet_list(x->msg_out, &s_list, 4, argv);
+    
+    return 0;
+}
+
+// Lua C function to implement io.msgout()
+static int l_msgout(lua_State *L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "pd_jam_obj");
+    t_jam *x = (t_jam *)lua_touserdata(L, -1);
+    lua_pop(L, 1);
+    
+    int n = lua_gettop(L);  // number of arguments
+    
+    if (n == 0) return 0;  // nothing to send
+    
+    t_atom argv[n];
+    
+    for (int i = 0; i < n; i++) {
+        if (lua_isnumber(L, i + 1)) {
+            SETFLOAT(&argv[i], (t_float)lua_tonumber(L, i + 1));
+        } else if (lua_isstring(L, i + 1)) {
+            SETSYMBOL(&argv[i], gensym(lua_tostring(L, i + 1)));
+        } else {
+            // For other types, convert to string representation
+            SETSYMBOL(&argv[i], gensym("nil"));
+        }
+    }
+    
+    outlet_list(x->msg_out, &s_list, n, argv);
     
     return 0;
 }
@@ -153,12 +181,15 @@ static void init_io(t_jam *x) {
     lua_setfield(L, -2, "ch");
     
     // Register C functions
-    lua_pushcfunction(L, l_play_note);
-    lua_setfield(L, -2, "play_note");
+    lua_pushcfunction(L, l_noteout);
+    lua_setfield(L, -2, "noteout");
     
-    lua_pushcfunction(L, l_send_cc);
-    lua_setfield(L, -2, "send_cc");
-    
+    lua_pushcfunction(L, l_cltout);
+    lua_setfield(L, -2, "cltout");
+ 
+    lua_pushcfunction(L, l_msgout);
+    lua_setfield(L, -2, "msgout");
+
     lua_pushcfunction(L, l_on);
     lua_setfield(L, -2, "on");
     
@@ -315,16 +346,16 @@ static void jam_list(t_jam *x, t_symbol *s, int argc, t_atom *argv) {
         return;  // First arg must be a symbol
     }
     
-    // Try to find specific handler (on_note, on_cc, etc.)
+    // Try to find specific handler (notein, ctlin, etc.)
     char handler_name[64];
-    snprintf(handler_name, sizeof(handler_name), "on_%s", cmd);
+    snprintf(handler_name, sizeof(handler_name), "%sin", cmd);
     
     lua_getfield(L, -1, handler_name);
     
     // If no specific handler, try generic on_message
     if (!lua_isfunction(L, -1)) {
         lua_pop(L, 1);
-        lua_getfield(L, -1, "on_message");
+        lua_getfield(L, -1, "msgin");
         
         // If still no handler, just return
         if (!lua_isfunction(L, -1)) {

@@ -35,12 +35,12 @@ io.on(1, 1/2)  -- Every beat, offset by half a beat
 - **`interval`** - Number of beats between triggers (default: 1)
 - **`offset`** - Beat offset for rhythmic displacement (default: 0)
 
-#### `io.play_note(note, velocity, duration)`
+#### `io.noteout(note, velocity, duration)`
 Send a note to Pure Data's left outlet.
 Duration is in beats, and is optional.  If duration is provided, the note will be output as makenote with duration converted to ms.
 
 ```lua
-io.play_note(60, 100, 1)      -- C4, velocity 100, 1 beat duration
+io.noteout(60, 100, 1)      -- C4, velocity 100, 1 beat duration
 ```
 
 - **`note`** - MIDI note number (0-127)
@@ -50,11 +50,11 @@ io.play_note(60, 100, 1)      -- C4, velocity 100, 1 beat duration
 Output format no duration: `note [note] [velocity] [channel]`
 Output format with duration: `makenote [note] [velocity] [duration] [channel]`
 
-#### `io.send_cc(controller, value)`
+#### `io.ctlout(controller, value)`
 Send a MIDI CC message.
 
 ```lua
-io.send_cc(7, 64)      -- Volume to 64 on output channel
+io.ctlout(7, 64)      -- Volume to 64 on output channel
 ```
 
 Output format: `cc [controller] [value] [channel]`
@@ -63,25 +63,25 @@ Output format: `cc [controller] [value] [channel]`
 
 Jam scripts can respond to incoming messages by implementing handler functions:
 
-### `on_note(io, note, velocity)`
+### `notein(io, note, velocity)`
 Called when a note message arrives.
 
 ```lua
-function jam:on_note(io, note, velocity)
+function jam:notein(io, note, velocity)
     -- Process incoming note
 end
 ```
 
-### `on_cc(io, controller, value)`
+### `ctlin(io, controller, value)`
 Called when a CC message arrives.
 
 ```lua
-function jam:on_cc(io, controller, value)
+function jam:ctlin(io, controller, value)
     -- Process incoming CC
 end
 ```
 
-### `on_message(io, ...)`
+### `msgin(io, ...)`
 Generic fallback for any unhandled list messages.
 
 ## Basic Jam Structure
@@ -98,7 +98,7 @@ function jam:tick(io)
 end
 
 -- Optional: respond to incoming messages
-function jam:on_note(io, note, velocity)
+function jam:notein(io, note, velocity)
     -- Process incoming MIDI
 end
 
@@ -120,8 +120,8 @@ return jam
 - **`reset`** - Reset tick counter to 0
 - **`bpm [number]`** - Set tempo
 - **`tpb [number]`** - Set ticks per beat resolution
-- **`list note [args]`** - Route to `on_note` handler
-- **`list cc [args]`** - Route to `on_cc` handler
+- **`list note [args]`** - Route to `notein` handler
+- **`list cc [args]`** - Route to `ctlin` handler
 
 ### Outlets
 - **Left outlet** - Musical messages (`note` and `cc` lists)
@@ -132,7 +132,7 @@ return jam
 Jam provides a **minimal timing and I/O foundation** upon which any musical process can be built:
 
 - **Tick-based timing** - Precise rhythmic control via `io.on()`
-- **Bidirectional MIDI** - Generate notes via `io.play_note()`, respond via `on_note()`
+- **Bidirectional MIDI** - Generate notes via `io.noteout()`, respond via `notein()`
 - **Lua flexibility** - Full programming language for algorithms, state, randomness
 - **Hot-reloadable** - Edit scripts and reload without restarting Pure Data
 
